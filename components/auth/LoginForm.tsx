@@ -1,0 +1,48 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import Card from "@/components/ui/Card";
+
+export default function LoginForm() {
+  const [showPass, setShowPass] = useState(false);
+  const router = useRouter();
+
+  return (
+    <Card className="w-full max-w-md p-8">
+      <div className="text-center mb-7">
+        <h2 className="text-2xl font-extrabold text-slate-900">Welcome back</h2>
+        <p className="text-slate-500 text-sm mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>Sign in to your Zenex account</p>
+      </div>
+      <div className="space-y-2.5 mb-6">
+        {[{ label: "Continue with Google", bg: "bg-white ring-1 ring-slate-200 hover:bg-slate-50", emoji: "🔵" },
+          { label: "Continue with Apple", bg: "bg-slate-900 text-white hover:bg-slate-800", emoji: "🍎" }].map((b) => (
+          <button key={b.label} className={`w-full flex items-center justify-center gap-3 py-3 rounded-xl font-bold text-sm transition-colors ${b.bg} text-slate-800`}>
+            <span>{b.emoji}</span> {b.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-slate-100" /><span className="text-xs text-slate-400 font-medium">or</span><div className="flex-1 h-px bg-slate-100" /></div>
+      <div className="space-y-3 mb-5">
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1.5 block">Email address</label>
+          <input defaultValue="alex.park@email.com" className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all text-slate-800" style={{ fontFamily: "'Inter', sans-serif" }} />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1.5 block">Password</label>
+          <div className="relative">
+            <input type={showPass ? "text" : "password"} defaultValue="password123" className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none pr-10 transition-all text-slate-800" style={{ fontFamily: "'Inter', sans-serif" }} />
+            <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">{showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+          </div>
+        </div>
+        <div className="text-right"><a href="#" className="text-xs text-teal-600 font-bold hover:text-teal-700">Forgot password?</a></div>
+      </div>
+      <button onClick={() => router.push("/client")} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm text-sm mb-4">Sign In</button>
+      <p className="text-center text-xs text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>
+        New to Zenex? <Link href="/auth" className="text-teal-600 font-bold hover:text-teal-700">Create account</Link>
+      </p>
+    </Card>
+  );
+}
