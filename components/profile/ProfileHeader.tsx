@@ -16,9 +16,9 @@ export default function ProfileHeader({ p }: { p: Provider }) {
           <div className="w-28 h-28 rounded-2xl overflow-hidden ring-4 ring-white shadow-xl shrink-0">
             <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
           </div>
-          <div className="flex-1 pb-1">
+          <div className="flex-1 pb-2 mt-7">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="text-2xl font-extrabold text-slate-900">{p.name}</h1>
+              <h1 className="text-2xl font-extrabold md:text-white text-gray-900">{p.name}</h1>
               {p.verified && <VBadge />}
               {p.elite && <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 ring-1 ring-amber-200 text-xs font-bold px-2.5 py-1 rounded-full"><Award className="w-3 h-3" />Top Pro</span>}
               {p.instant && <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 ring-1 ring-teal-200 text-xs font-bold px-2.5 py-1 rounded-full"><Bolt className="w-3 h-3" />Instant Book</span>}
