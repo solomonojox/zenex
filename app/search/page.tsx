@@ -1,19 +1,44 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Brain } from "lucide-react";
-import { PROVIDERS } from "@/lib/data";
 import ProviderCard from "@/components/ui/ProviderCard";
 import ProviderListItem from "@/components/search/ProviderListItem";
 import SearchFilters, { type SearchFilterState } from "@/components/search/SearchFilters";
+import { useProviders } from "@/lib/queries/providers";
+import type { Provider } from "@/lib/types";
 
 function SearchContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
 
   const [filters, setFilters] = useState<SearchFilterState>({ sort: "Top Rated", tags: [], layout: "grid", minRating: 0 });
-  const filtered = useMemo(() => PROVIDERS.filter((p) => p.rating >= filters.minRating), [filters.minRating]);
+
+  // Map UI sort to the API's sort/filter params.
+  const sort = filters.sort === "Lowest Price" ? "price" : "rating";
+  const instant = filters.sort === "Instant Book" ? "true" : undefined;
+
+  const { data, isLoading, isError } = useProviders({ sort, instant, limit: 50 });
+
+  // Client-side refinements (rating + tag chips) on top of the API results.
+  // Tags are matched leniently (case/punctuation-insensitive) since the UI
+  // chip labels don't exactly equal the stored tags; "Instant Book" maps to
+  // the provider's instant flag.
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const matchesTags = (p: Provider) =>
+    filters.tags.length === 0 ||
+    filters.tags.some((t) => {
+      if (t === "Instant Book") return p.instant;
+      const b = norm(t);
+      return p.tags.some((pt) => {
+        const a = norm(pt);
+        return a.includes(b) || b.includes(a);
+      });
+    });
+  const filtered = (data?.items ?? []).filter(
+    (p) => p.rating >= filters.minRating && matchesTags(p),
+  );
 
   return (
     <>
@@ -32,11 +57,29 @@ function SearchContent() {
         </div>
 
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-slate-800">{filtered.length} cleaners near Toronto, ON</h2>
+          <h2 className="font-bold text-slate-800">
+            {isLoading ? "Loading cleaners…" : `${filtered.length} cleaners available`}
+          </h2>
           <span className="text-xs text-slate-400">Prices per hour · taxes extra</span>
         </div>
 
-        {filters.layout === "grid" ? (
+        {isError ? (
+          <div className="text-center py-16">
+            <p className="font-semibold text-red-500">Couldn&apos;t load cleaners.</p>
+            <p className="text-sm mt-1 text-slate-400">Make sure the API is running on port 4000, then reload.</p>
+          </div>
+        ) : isLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-72 rounded-2xl bg-slate-100 animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-slate-400">
+            <p className="font-semibold text-slate-500">No cleaners match your filters.</p>
+            <p className="text-sm mt-1">Try clearing tags or lowering the rating filter.</p>
+          </div>
+        ) : filters.layout === "grid" ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {filtered.map((p) => <ProviderCard key={p.id} p={p} />)}
           </div>

@@ -1,9 +1,30 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, MapPin, Star, CheckCircle, Award, Bolt, Brain, MessageSquare, Heart } from "lucide-react";
 import type { Provider } from "@/lib/types";
 import VBadge from "@/components/ui/VBadge";
+import { useAuth } from "@/context/auth/useAuth";
+import { useFavorites, useAddFavorite, useRemoveFavorite } from "@/lib/queries/favorites";
 
 export default function ProfileHeader({ p }: { p: Provider }) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { data: favorites } = useFavorites(isAuthenticated);
+  const add = useAddFavorite();
+  const remove = useRemoveFavorite();
+  const isFav = !!favorites?.some((f) => f.provider.id === p.id);
+
+  const toggleFav = () => {
+    if (!isAuthenticated) {
+      router.push("/auth?mode=login");
+      return;
+    }
+    if (isFav) remove.mutate(p.id);
+    else add.mutate(p.id);
+  };
+
   return (
     <>
       <div className="h-40 bg-gradient-to-br from-[#0A3D38] to-teal-700 relative">
@@ -33,7 +54,14 @@ export default function ProfileHeader({ p }: { p: Provider }) {
           </div>
           <div className="flex gap-2 pb-1 shrink-0">
             <Link href={`/messages?thread=${p.id}`} className="p-3 rounded-xl ring-1 ring-slate-200 hover:bg-teal-50 hover:ring-teal-300 text-slate-600 hover:text-teal-700 transition-colors"><MessageSquare className="w-5 h-5" /></Link>
-            <button className="p-3 rounded-xl ring-1 ring-slate-200 hover:bg-rose-50 hover:ring-rose-200 text-slate-400 hover:text-rose-500 transition-colors"><Heart className="w-5 h-5" /></button>
+            <button
+              onClick={toggleFav}
+              disabled={add.isPending || remove.isPending}
+              aria-label={isFav ? "Remove from favourites" : "Add to favourites"}
+              className={`p-3 rounded-xl ring-1 transition-colors ${isFav ? "bg-rose-50 ring-rose-200 text-rose-500" : "ring-slate-200 hover:bg-rose-50 hover:ring-rose-200 text-slate-400 hover:text-rose-500"}`}
+            >
+              <Heart className={`w-5 h-5 ${isFav ? "fill-rose-500" : ""}`} />
+            </button>
           </div>
         </div>
       </div>

@@ -18,6 +18,9 @@ const bookingInclude = {
   provider: {
     include: { user: { select: { firstName: true, lastName: true } } },
   },
+  client: {
+    include: { user: { select: { firstName: true, lastName: true } } },
+  },
 } satisfies Prisma.BookingInclude;
 
 @Injectable()
@@ -135,7 +138,7 @@ export class BookingsService {
   async findOne(user: AuthUser, id: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { id },
-      include: { ...bookingInclude, client: true },
+      include: bookingInclude,
     });
     if (!booking) throw new NotFoundException('Booking not found');
     await this.assertAccess(user, booking);

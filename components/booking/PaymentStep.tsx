@@ -24,8 +24,6 @@ export default function PaymentStep({
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-slate-600"><span>{service.name}</span><span>${service.price}</span></div>
           {extras.map((e) => <div key={e} className="flex justify-between text-slate-600"><span>{e}</span><span>+${EXTRAS_LIST.find((x) => x.name === e)?.price}</span></div>)}
-          <div className="flex justify-between text-slate-600"><span>Platform fee (7%)</span><span>${Math.round(total / 1.2 * 0.07)}</span></div>
-          <div className="flex justify-between text-slate-600"><span>HST (13%)</span><span>${Math.round(total / 1.2 * 0.13)}</span></div>
           <div className="flex justify-between font-extrabold text-slate-900 pt-2 border-t border-slate-100 text-base"><span>Total charged</span><span>${total}</span></div>
         </div>
       </Card>

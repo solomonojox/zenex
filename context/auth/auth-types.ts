@@ -6,6 +6,7 @@ export interface UserData {
   role: string;
   accountType: string;
   userName: string;
+  tenantId: string;
 }
 
 export interface AuthContextType {

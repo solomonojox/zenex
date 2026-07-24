@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
 export interface Service {
+  id?: string;
   name: string;
   duration: string;
   price: number;
@@ -8,7 +9,7 @@ export interface Service {
 }
 
 export interface Provider {
-  id: number;
+  id: string;
   name: string;
   title: string;
   location: string;
