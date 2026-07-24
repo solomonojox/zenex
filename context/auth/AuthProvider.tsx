@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "./auth-context";
 import { UserData, AuthContextType } from "./auth-types";
 import axiosInstance from "@/utils/tokenAxios";
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Populate minimal user state from the token's claims (instant, no request).
   const applyToken = useCallback((token: string) => {
@@ -89,18 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     (token: string) => {
       localStorage.setItem(TOKEN_KEY, token);
+      // Drop any previous user's cached queries so the new user never sees them.
+      queryClient.clear();
       applyToken(token);
       fetchMe();
     },
-    [applyToken, fetchMe],
+    [applyToken, fetchMe, queryClient],
   );
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
     setIsAuthenticated(false);
+    queryClient.clear();
     router.replace("/auth?mode=login");
-  }, [router]);
+  }, [router, queryClient]);
 
   const contextValue: AuthContextType = {
     isAuthenticated,

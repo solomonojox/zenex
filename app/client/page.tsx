@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Repeat, Wallet, ChevronRight, MessageSquare } from "lucide-react";
@@ -34,11 +34,19 @@ export default function ClientDashboardPage() {
     )[0];
 
   const firstName = user?.firstName || "there";
-  const today = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+
+  // Compute the date on the client only — locale formatting differs between
+  // the server and browser and would otherwise cause a hydration mismatch.
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+  }, []);
 
   const upcomingProvider = upcoming?.provider?.user
     ? `${upcoming.provider.user.firstName} ${upcoming.provider.user.lastName}`
