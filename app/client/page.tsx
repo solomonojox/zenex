@@ -10,6 +10,7 @@ import StatsGrid from "@/components/client/StatsGrid";
 import BookingsList from "@/components/client/BookingsList";
 import FavoriteProsList from "@/components/client/FavoriteProsList";
 import NotificationsPanel from "@/components/client/NotificationsPanel";
+import SubscriptionsList from "@/components/client/SubscriptionsList";
 
 export default function ClientDashboardPage() {
   const router = useRouter();
@@ -91,6 +92,9 @@ export default function ClientDashboardPage() {
 
             <h2 className="font-extrabold text-slate-900 text-lg mb-4">Favourite Pros</h2>
             <FavoriteProsList />
+
+            <h2 className="font-extrabold text-slate-900 text-lg mb-4 mt-7">My Plans</h2>
+            <SubscriptionsList />
           </div>
 
           <div className="space-y-4">
