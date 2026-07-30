@@ -7,16 +7,20 @@ const TIME_SLOTS = ["8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:
 export default function DateTimeStep({
   date, onDate, time, onTime,
 }: { date: number; onDate: (d: number) => void; time: string; onTime: (t: string) => void }) {
-  const offDays = [6, 7, 13, 14, 20, 21, 27, 28];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthLabel = now.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <h3 className="font-bold text-slate-900 mb-4">Pick a date · July 2025</h3>
+        <h3 className="font-bold text-slate-900 mb-4">Pick a date · {monthLabel}</h3>
         <div className="grid grid-cols-7 gap-1 text-center text-xs mb-3">
           {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} className="font-bold text-slate-400 py-1">{d}</div>)}
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
-            const off = offDays.includes(d) || d < 4;
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+            const off = d <= now.getDate(); // only strictly-future days are bookable
             return (
               <button key={d} disabled={off} onClick={() => onDate(d)} className={`py-2 rounded-lg font-semibold transition-colors ${off ? "text-slate-200 cursor-not-allowed" : d === date ? "bg-teal-600 text-white shadow-sm" : "bg-teal-50 text-teal-700 hover:bg-teal-100"}`}>
                 {d}

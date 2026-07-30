@@ -36,4 +36,27 @@ axiosInstance.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Response interceptor:
+//  - unwraps the API's { success, data } envelope so callers get `res.data`
+//    as the actual payload
+//  - normalizes error messages (the API returns { statusCode, message, ... },
+//    where message may be a string or an array of validation strings)
+axiosInstance.interceptors.response.use(
+  (response) => {
+    const body = response.data;
+    if (body && typeof body === "object" && "success" in body && "data" in body) {
+      response.data = body.data;
+    }
+    return response;
+  },
+  (error) => {
+    const apiMessage = error?.response?.data?.message;
+    const message = Array.isArray(apiMessage)
+      ? apiMessage.join(", ")
+      : apiMessage || error?.message || "Request failed";
+    error.message = message;
+    return Promise.reject(error);
+  },
+);
+
 export default axiosInstance;

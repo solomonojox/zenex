@@ -1,0 +1,511 @@
+// ─────────────────────────────────────────────────────────────
+// Zenex marketplace — Prisma schema
+// Modeled from the frontend types in lib/types.ts + the screens.
+// Every tenant-scoped table carries `tenantId` for multi-tenancy.
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (port 6543) — app runtime
+  directUrl = env("DIRECT_URL")   // direct (port 5432) — migrations
+}
+
+// ─────────────── Enums ───────────────
+
+enum Role {
+  CLIENT
+  PROVIDER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum VerificationStatus {
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+  ESCALATED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+// ─────────────── Tenancy ───────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  slug      String   @unique // maps to subdomain -> "x-Tenant" header
+  name      String
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  providers         ProviderProfile[]
+  bookings          Booking[]
+  services          Service[]
+  serviceCategories ServiceCategory[]
+  subscriptionPlans SubscriptionPlan[]
+  disputes          Dispute[]
+
+  @@map("tenants")
+}
+
+// ─────────────── Users & profiles ───────────────
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  firstName    String
+  lastName     String
+  userName     String?
+  phone        String?
+  role         Role     @default(CLIENT)
+  accountType  String   @default("individual")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientProfile   ClientProfile?
+  providerProfile ProviderProfile?
+  wallet          Wallet?
+  refreshTokens   RefreshToken[]
+  notifications   Notification[]
+  favorites       Favorite[]
+  sentMessages    Message[]        @relation("MessageSender")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model ClientProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  address   String?
+  city      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings  Booking[]
+  reviews   Review[]
+  favorites Favorite[]
+
+  @@map("client_profiles")
+}
+
+model ProviderProfile {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String   @unique
+  title         String
+  location      String
+  bio           String?
+  imageUrl      String?
+  hourlyRate    Float    @default(0)
+  minBookingHrs Int      @default(2)
+  maxRadiusKm   Int      @default(25)
+  rating        Float    @default(0)
+  reviewsCount  Int      @default(0)
+  completions   Int      @default(0)
+  responseTime  String?
+  languages     String[]
+  tags          String[]
+  verified      Boolean  @default(false)
+  elite         Boolean  @default(false)
+  instant       Boolean  @default(false)
+  aiMatch       Int      @default(0) // ai_match score 0-100
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services             Service[]
+  bookings             Booking[]
+  reviews              Review[]
+  payouts              Payout[]
+  verificationRequests VerificationRequest[]
+  favoritedBy          Favorite[]
+
+  @@index([tenantId])
+  @@index([location])
+  @@map("provider_profiles")
+}
+
+// ─────────────── Catalog ───────────────
+
+model ServiceCategory {
+  id       String   @id @default(cuid())
+  tenantId String
+  label    String
+  sub      String? // e.g. "2,400+ pros"
+  icon     String? // lucide icon name, e.g. "Home"
+  color    String? // e.g. "teal"
+  createdAt DateTime @default(now())
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  services Service[]
+
+  @@index([tenantId])
+  @@map("service_categories")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  tenantId    String
+  providerId  String
+  categoryId  String?
+  name        String
+  description String?
+  duration    String? // e.g. "2–3 hrs"
+  price       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  category ServiceCategory? @relation(fields: [categoryId], references: [id])
+  bookings Booking[]
+
+  @@index([tenantId])
+  @@index([providerId])
+  @@map("services")
+}
+
+// ─────────────── Bookings ───────────────
+
+model Booking {
+  id           String        @id @default(cuid())
+  reference    String        @unique // e.g. "BK-2841"
+  tenantId     String
+  clientId     String
+  providerId   String
+  serviceId    String?
+  scheduledFor DateTime
+  timeSlot     String? // e.g. "9:00 AM – 1:00 PM"
+  status       BookingStatus @default(PENDING)
+  basePrice    Float
+  extrasTotal  Float         @default(0)
+  totalPrice   Float
+  address      String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client   ClientProfile   @relation(fields: [clientId], references: [id])
+  provider ProviderProfile @relation(fields: [providerId], references: [id])
+  service  Service?        @relation(fields: [serviceId], references: [id])
+  extras   BookingExtra[]
+  review   Review?
+  dispute  Dispute?
+  transaction Transaction?
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([providerId])
+  @@index([status])
+  @@map("bookings")
+}
+
+model BookingExtra {
+  id        String  @id @default(cuid())
+  bookingId String
+  name      String
+  price     Float
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("booking_extras")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  clientId   String
+  providerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  booking  Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client   ClientProfile   @relation(fields: [clientId], references: [id])
+  provider ProviderProfile @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+  @@map("reviews")
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  clientId   String
+  providerId String
+  createdAt  DateTime @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client   ClientProfile   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, providerId])
+  @@map("favorites")
+}
+
+// ─────────────── Messaging ───────────────
+
+model MessageThread {
+  id           String   @id @default(cuid())
+  tenantId     String
+  clientId     String
+  providerId   String
+  lastPreview  String?
+  lastMessageAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  messages Message[]
+
+  @@unique([clientId, providerId])
+  @@index([tenantId])
+  @@map("message_threads")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  threadId  String
+  senderId  String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User          @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([threadId])
+  @@map("messages")
+}
+
+// ─────────────── Wallet & payments ───────────────
+
+model Wallet {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  balance               Float    @default(0)
+  currency              String   @default("CAD")
+  stripeCustomerId      String?
+  stripeConnectAccountId String?
+  createdAt             DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  reference   String            @unique // e.g. "TXN-8821"
+  walletId    String
+  bookingId   String?           @unique
+  description String
+  amount      Float
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  stripeRef   String?
+  createdAt   DateTime          @default(now())
+
+  wallet  Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([walletId])
+  @@map("transactions")
+}
+
+model Payout {
+  id         String       @id @default(cuid())
+  reference  String       @unique // e.g. "PAY-441"
+  providerId String
+  amount     Float
+  jobsCount  Int          @default(0)
+  status     PayoutStatus @default(PENDING)
+  stripeRef  String?
+  paidAt     DateTime?
+  createdAt  DateTime     @default(now())
+
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("payouts")
+}
+
+// ─────────────── Subscriptions ───────────────
+
+model SubscriptionPlan {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String // Starter / Regular / Premium
+  frequency     String // Monthly / Bi-weekly / Weekly
+  price         Float
+  savesPercent  Int      @default(0)
+  features      String[]
+  popular       Boolean  @default(false)
+  stripePriceId String?
+  createdAt     DateTime @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@index([tenantId])
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id          String             @id @default(cuid())
+  planId      String
+  clientId    String
+  status      SubscriptionStatus @default(ACTIVE)
+  startedAt   DateTime           @default(now())
+  renewsAt    DateTime?
+  stripeSubId String?
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([clientId])
+  @@map("subscriptions")
+}
+
+// ─────────────── Verification (KYC) ───────────────
+
+model VerificationRequest {
+  id          String             @id @default(cuid())
+  providerId  String
+  status      VerificationStatus @default(SUBMITTED)
+  city        String?
+  submittedAt DateTime           @default(now())
+  reviewedAt  DateTime?
+  reviewNote  String?
+
+  provider  ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  documents Document[]
+
+  @@index([providerId])
+  @@index([status])
+  @@map("verification_requests")
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  requestId   String
+  type        String // "ID", "Insurance", "Background check", "Business Reg."
+  url         String
+  uploadedAt  DateTime @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("documents")
+}
+
+// ─────────────── Disputes ───────────────
+
+model Dispute {
+  id         String          @id @default(cuid())
+  reference  String          @unique // e.g. "DSP-082"
+  tenantId   String
+  bookingId  String?         @unique
+  clientName String
+  providerName String
+  issue      String
+  priority   DisputePriority @default(MEDIUM)
+  status     DisputeStatus   @default(OPEN)
+  createdAt  DateTime        @default(now())
+  resolvedAt DateTime?
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("disputes")
+}
+
+// ─────────────── Notifications ───────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String?
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}

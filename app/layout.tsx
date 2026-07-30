@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Nav from "@/components/nav/Nav";
 import DemoBar from "@/components/nav/DemoBar";
+import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,11 +16,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="antialiased" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        <div className="size-full flex flex-col min-h-screen">
-          <Nav />
-          <main className="flex-1">{children}</main>
-          {/* <DemoBar /> */}
-        </div>
+        <Providers>
+          <div className="size-full flex flex-col min-h-screen">
+            <Nav />
+            <main className="flex-1">{children}</main>
+            {/* <DemoBar /> */}
+          </div>
+        </Providers>
       </body>
     </html>
   );

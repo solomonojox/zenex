@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Settings } from "lucide-react";
-import { PROVIDERS } from "@/lib/data";
+import { useAuth } from "@/context/auth/useAuth";
+import { useMe } from "@/lib/queries/users";
 import OverviewTab from "@/components/provider/OverviewTab";
 import JobsTab from "@/components/provider/JobsTab";
 import ProfileTab from "@/components/provider/ProfileTab";
@@ -10,8 +12,25 @@ import ProfileTab from "@/components/provider/ProfileTab";
 type TabKey = "overview" | "jobs" | "profile";
 
 export default function ProviderDashboardPage() {
+  const router = useRouter();
+  const { isAuthenticated, authLoading, user } = useAuth();
+  const { data: me } = useMe(isAuthenticated);
   const [tab, setTab] = useState<TabKey>("overview");
-  const provider = PROVIDERS[0];
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace("/auth?mode=login");
+    } else if (user?.role && user.role !== "PROVIDER" && user.role !== "ADMIN") {
+      router.replace("/client");
+    }
+  }, [authLoading, isAuthenticated, user, router]);
+
+  const pp = me?.providerProfile;
+  const name = me ? `${me.firstName} ${me.lastName}`.trim() : "Provider";
+  const image =
+    pp?.imageUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D9488&color=fff`;
 
   return (
     <div className="min-h-screen bg-[#F8FAFB]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -19,12 +38,12 @@ export default function ProviderDashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img src={provider.image} alt={provider.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-teal-100" />
+              <img src={image} alt={name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-teal-100" />
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full ring-2 ring-white" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold text-slate-900">{provider.name}</h1>
-              <div className="text-xs text-slate-500 flex items-center gap-2">★ {provider.rating} · {provider.location.split(",")[0]} · <span className="text-emerald-600 font-bold">Online</span></div>
+              <h1 className="text-xl font-extrabold text-slate-900">{name}</h1>
+              <div className="text-xs text-slate-500 flex items-center gap-2">★ {(pp?.rating ?? 0).toFixed(2)} · {(pp?.location || "").split(",")[0]} · <span className="text-emerald-600 font-bold">Online</span></div>
             </div>
           </div>
           <div className="flex gap-2">

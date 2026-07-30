@@ -1,28 +1,86 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { MESSAGES } from "@/lib/data";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/auth/useAuth";
+import {
+  useThreads,
+  useThreadMessages,
+  useSendMessage,
+  useCreateThread,
+} from "@/lib/queries/messages";
+import { useMessageSocket } from "@/lib/realtime/useMessageSocket";
 import ThreadList from "@/components/messages/ThreadList";
 import ChatWindow from "@/components/messages/ChatWindow";
 
 function MessagesContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const threadParam = Number(searchParams.get("thread"));
-  const initialId = MESSAGES.some((m) => m.id === threadParam) ? threadParam : MESSAGES[0].id;
+  const { isAuthenticated, authLoading, user } = useAuth();
 
-  const [threads, setThreads] = useState(MESSAGES);
-  const [activeId, setActiveId] = useState(initialId);
-  const active = threads.find((m) => m.id === activeId) ?? threads[0];
+  // ?thread=<counterpartId> means "open a conversation with this person"
+  // (a provider id when you're a client, or a client id when you're a provider).
+  const counterpartParam = searchParams.get("thread");
+
+  const { data: threads = [], isLoading: threadsLoading } = useThreads(isAuthenticated);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const createThread = useCreateThread();
+  const handledRef = useRef(false);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.replace("/auth?mode=login");
+  }, [authLoading, isAuthenticated, router]);
+
+  // Resolve the counterpart param to an actual thread (existing or new).
+  useEffect(() => {
+    if (handledRef.current || !isAuthenticated) return;
+    if (counterpartParam) {
+      const existing = threads.find(
+        (t) =>
+          t.providerId === counterpartParam ||
+          t.clientId === counterpartParam ||
+          t.counterpart?.id === counterpartParam,
+      );
+      if (existing) {
+        setActiveId(existing.id);
+        handledRef.current = true;
+      } else if (!createThread.isPending) {
+        createThread.mutate(counterpartParam, {
+          onSuccess: (t) => {
+            setActiveId(t.id);
+            handledRef.current = true;
+          },
+        });
+      }
+    } else if (threads.length) {
+      setActiveId((cur) => cur ?? threads[0].id);
+      handledRef.current = true;
+    }
+  }, [counterpartParam, threads, isAuthenticated, createThread]);
+
+  const { data: messages = [], isLoading: msgsLoading } = useThreadMessages(
+    activeId ?? undefined,
+  );
+  const send = useSendMessage();
+  useMessageSocket(activeId ?? undefined);
+
+  const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
   const handleSend = (text: string) => {
-    setThreads((t) => t.map((m) => (m.id === activeId ? { ...m, thread: [...m.thread, { from: "user" as const, text, time: "Just now" }] } : m)));
+    if (activeId) send.mutate({ threadId: activeId, body: text });
   };
 
   return (
     <>
-      <ThreadList threads={threads} activeId={activeId} onSelect={setActiveId} />
-      <ChatWindow thread={active} onSend={handleSend} />
+      <ThreadList threads={threads} activeId={activeId} onSelect={setActiveId} loading={threadsLoading} />
+      <ChatWindow
+        thread={activeThread}
+        messages={messages}
+        myId={user?.id}
+        onSend={handleSend}
+        sending={send.isPending}
+        loading={msgsLoading && !!activeId}
+      />
     </>
   );
 }

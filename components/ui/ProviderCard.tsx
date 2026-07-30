@@ -1,13 +1,33 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MapPin, Heart, Award, Bolt, Brain } from "lucide-react";
 import type { Provider } from "@/lib/types";
 import Stars from "./Stars";
+import { useAuth } from "@/context/auth/useAuth";
+import { useFavorites, useAddFavorite, useRemoveFavorite } from "@/lib/queries/favorites";
 
 export default function ProviderCard({ p }: { p: Provider }) {
-  const [liked, setLiked] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { data: favorites } = useFavorites(isAuthenticated);
+  const add = useAddFavorite();
+  const remove = useRemoveFavorite();
+
+  const isFav = !!favorites?.some((f) => f.provider.id === p.id);
+
+  const toggleFav = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      router.push("/auth?mode=login");
+      return;
+    }
+    if (isFav) remove.mutate(p.id);
+    else add.mutate(p.id);
+  };
+
   return (
     <Link
       href={`/providers/${p.id}`}
@@ -17,14 +37,12 @@ export default function ProviderCard({ p }: { p: Provider }) {
         <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setLiked(!liked);
-          }}
+          onClick={toggleFav}
+          disabled={add.isPending || remove.isPending}
+          aria-label={isFav ? "Remove from favourites" : "Add to favourites"}
           className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur flex items-center justify-center hover:bg-white transition-colors shadow-sm"
         >
-          <Heart className={`w-4 h-4 ${liked ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
+          <Heart className={`w-4 h-4 ${isFav ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
         </button>
         <div className="absolute bottom-3 left-3 flex gap-1.5">
           {p.elite && (
