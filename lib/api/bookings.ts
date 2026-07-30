@@ -37,6 +37,7 @@ export interface ApiBooking {
   };
   service?: { name: string } | null;
   extras?: { id: string; name: string; price: number }[];
+  review?: { id: string; rating: number } | null;
 }
 
 export interface BookingList {

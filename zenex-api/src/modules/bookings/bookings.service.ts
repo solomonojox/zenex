@@ -21,6 +21,7 @@ const bookingInclude = {
   client: {
     include: { user: { select: { firstName: true, lastName: true } } },
   },
+  review: true,
 } satisfies Prisma.BookingInclude;
 
 @Injectable()
