@@ -1,0 +1,273 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Booking,
+  BookingStatus,
+  PayoutStatus,
+  TransactionStatus,
+  TransactionType,
+} from '@prisma/client';
+import Stripe from 'stripe';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuthUser } from '../../common/decorators/current-user.decorator';
+import { StripeService } from './stripe.service';
+
+@Injectable()
+export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripe: StripeService,
+  ) {}
+
+  private ref(prefix: string) {
+    return `${prefix}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  }
+
+  private money(n: number) {
+    return Math.round(n * 100) / 100;
+  }
+
+  private ensureWallet(userId: string) {
+    return this.prisma.wallet.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+    });
+  }
+
+  /** Client pays for a booking. Live → Stripe PaymentIntent; demo → instant settle. */
+  async checkout(user: AuthUser, bookingId: string) {
+    const client = await this.prisma.clientProfile.findUnique({
+      where: { userId: user.id },
+    });
+    if (!client) throw new ForbiddenException('Only clients can pay');
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { transaction: true },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientId !== client.id) {
+      throw new ForbiddenException('Not your booking');
+    }
+    if (booking.transaction) {
+      throw new BadRequestException('Booking already paid');
+    }
+
+    const amount = this.money(booking.totalPrice);
+    const platformFee = this.money((amount * this.stripe.platformFeePercent) / 100);
+    const providerEarning = this.money(amount - platformFee);
+
+    if (this.stripe.enabled) {
+      const wallet = await this.ensureWallet(user.id);
+      const intent = await this.stripe.client.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency: (wallet.currency || 'CAD').toLowerCase(),
+        metadata: {
+          bookingId: booking.id,
+          clientId: client.id,
+          providerId: booking.providerId,
+        },
+        automatic_payment_methods: { enabled: true },
+      });
+      // Settlement is finalized by the webhook on payment_intent.succeeded.
+      return {
+        mode: 'live' as const,
+        clientSecret: intent.client_secret,
+        amount,
+        platformFee,
+        providerEarning,
+      };
+    }
+
+    // DEMO mode — settle immediately.
+    await this.settle(booking, { amount, platformFee, providerEarning });
+    return {
+      mode: 'demo' as const,
+      paid: true,
+      amount,
+      platformFee,
+      providerEarning,
+      bookingId: booking.id,
+    };
+  }
+
+  /** Records the money movement for a paid booking (client debit + provider credit). */
+  private async settle(
+    booking: Booking,
+    opts: {
+      amount: number;
+      platformFee: number;
+      providerEarning: number;
+      stripeRef?: string;
+    },
+  ) {
+    const clientProfile = await this.prisma.clientProfile.findUnique({
+      where: { id: booking.clientId },
+    });
+    const providerProfile = await this.prisma.providerProfile.findUnique({
+      where: { id: booking.providerId },
+    });
+    if (!clientProfile || !providerProfile) {
+      throw new NotFoundException('Booking parties not found');
+    }
+
+    const clientWallet = await this.ensureWallet(clientProfile.userId);
+    const providerWallet = await this.ensureWallet(providerProfile.userId);
+
+    return this.prisma.$transaction(async (tx) => {
+      // Client is charged (debit) — this is the one transaction tied to the booking.
+      await tx.transaction.create({
+        data: {
+          reference: this.ref('TXN'),
+          walletId: clientWallet.id,
+          bookingId: booking.id,
+          description: `Payment — booking ${booking.reference}`,
+          amount: -opts.amount,
+          type: TransactionType.DEBIT,
+          status: TransactionStatus.COMPLETED,
+          stripeRef: opts.stripeRef,
+        },
+      });
+      await tx.wallet.update({
+        where: { id: clientWallet.id },
+        data: { balance: { decrement: opts.amount } },
+      });
+
+      // Provider is credited their earning (net of platform fee).
+      await tx.transaction.create({
+        data: {
+          reference: this.ref('TXN'),
+          walletId: providerWallet.id,
+          description: `Earning — booking ${booking.reference}`,
+          amount: opts.providerEarning,
+          type: TransactionType.CREDIT,
+          status: TransactionStatus.COMPLETED,
+          stripeRef: opts.stripeRef,
+        },
+      });
+      await tx.wallet.update({
+        where: { id: providerWallet.id },
+        data: { balance: { increment: opts.providerEarning } },
+      });
+
+      if (booking.status === BookingStatus.PENDING) {
+        await tx.booking.update({
+          where: { id: booking.id },
+          data: { status: BookingStatus.CONFIRMED },
+        });
+      }
+    });
+  }
+
+  /** Stripe webhook — verifies signature and settles on payment_intent.succeeded. */
+  async handleWebhook(signature: string, rawBody: Buffer) {
+    if (!this.stripe.enabled) {
+      return { received: true, ignored: 'demo mode' };
+    }
+
+    let event: Stripe.Event;
+    try {
+      event = this.stripe.client.webhooks.constructEvent(
+        rawBody,
+        signature,
+        this.stripe.webhookSecret,
+      );
+    } catch {
+      throw new BadRequestException('Invalid webhook signature');
+    }
+
+    if (event.type === 'payment_intent.succeeded') {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      const bookingId = intent.metadata?.bookingId;
+      if (bookingId) {
+        const booking = await this.prisma.booking.findUnique({
+          where: { id: bookingId },
+          include: { transaction: true },
+        });
+        if (booking && !booking.transaction) {
+          const amount = this.money(intent.amount / 100);
+          const platformFee = this.money(
+            (amount * this.stripe.platformFeePercent) / 100,
+          );
+          const providerEarning = this.money(amount - platformFee);
+          await this.settle(booking, {
+            amount,
+            platformFee,
+            providerEarning,
+            stripeRef: intent.id,
+          });
+        }
+      }
+    }
+
+    return { received: true };
+  }
+
+  /** Provider withdraws their available balance. Live → Stripe transfer; demo → simulated. */
+  async payout(user: AuthUser) {
+    const provider = await this.prisma.providerProfile.findUnique({
+      where: { userId: user.id },
+    });
+    if (!provider) {
+      throw new ForbiddenException('Only providers can request payouts');
+    }
+
+    const wallet = await this.ensureWallet(user.id);
+    if (wallet.balance <= 0) {
+      throw new BadRequestException('No balance available for payout');
+    }
+
+    const amount = this.money(wallet.balance);
+    const jobs = await this.prisma.transaction.count({
+      where: { walletId: wallet.id, type: TransactionType.CREDIT },
+    });
+
+    let stripeRef: string | undefined;
+    if (this.stripe.enabled && wallet.stripeConnectAccountId) {
+      const transfer = await this.stripe.client.transfers.create({
+        amount: Math.round(amount * 100),
+        currency: (wallet.currency || 'CAD').toLowerCase(),
+        destination: wallet.stripeConnectAccountId,
+      });
+      stripeRef = transfer.id;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const payout = await tx.payout.create({
+        data: {
+          reference: this.ref('PAY'),
+          providerId: provider.id,
+          amount,
+          jobsCount: jobs,
+          status: PayoutStatus.PAID,
+          stripeRef,
+          paidAt: new Date(),
+        },
+      });
+      await tx.transaction.create({
+        data: {
+          reference: this.ref('TXN'),
+          walletId: wallet.id,
+          description: `Payout ${payout.reference}`,
+          amount: -amount,
+          type: TransactionType.DEBIT,
+          status: TransactionStatus.COMPLETED,
+          stripeRef,
+        },
+      });
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: 0 },
+      });
+      return payout;
+    });
+  }
+}

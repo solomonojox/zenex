@@ -9,7 +9,7 @@ import type {
 
 export const PROVIDERS: Provider[] = [
   {
-    id: 1, name: "Maria Santos", title: "Home Cleaning Specialist",
+    id: "1", name: "Maria Santos", title: "Home Cleaning Specialist",
     location: "Toronto, ON", rating: 4.97, reviews: 312, price: 45,
     verified: true, elite: true, instant: true,
     tags: ["Deep Clean", "Move-in/out", "Recurring"],
@@ -24,7 +24,7 @@ export const PROVIDERS: Provider[] = [
     ai_match: 98,
   },
   {
-    id: 2, name: "James Kowalski", title: "Commercial & Residential Pro",
+    id: "2", name: "James Kowalski", title: "Commercial & Residential Pro",
     location: "Vancouver, BC", rating: 4.94, reviews: 218, price: 52,
     verified: true, elite: false, instant: true,
     tags: ["Office", "Commercial", "Home"],
@@ -38,7 +38,7 @@ export const PROVIDERS: Provider[] = [
     ai_match: 91,
   },
   {
-    id: 3, name: "David Chen", title: "Eco-Friendly Cleaning Expert",
+    id: "3", name: "David Chen", title: "Eco-Friendly Cleaning Expert",
     location: "Calgary, AB", rating: 4.92, reviews: 174, price: 48,
     verified: true, elite: true, instant: false,
     tags: ["Eco", "Pet-friendly", "Deep Clean"],
@@ -52,7 +52,7 @@ export const PROVIDERS: Provider[] = [
     ai_match: 87,
   },
   {
-    id: 4, name: "Équipe Nettoyage Pro", title: "Agency · 12-person team",
+    id: "4", name: "Équipe Nettoyage Pro", title: "Agency · 12-person team",
     location: "Montréal, QC", rating: 4.89, reviews: 96, price: 38,
     verified: true, elite: false, instant: false,
     tags: ["Bilingual", "Office", "Floors"],
@@ -174,7 +174,7 @@ export const EXTRAS_LIST: { name: string; price: number; Icon: ServiceCategory["
   { name: "Interior Windows", price: 35, Icon: Sparkles },
 ];
 
-export function getProviderById(id: number): Provider | undefined {
+export function getProviderById(id: string): Provider | undefined {
   return PROVIDERS.find((p) => p.id === id);
 }
 

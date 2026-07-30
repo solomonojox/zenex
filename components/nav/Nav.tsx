@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, MessageSquare, Wallet, Menu, X, Sparkles } from "lucide-react";
+import { Search, MessageSquare, Wallet, Menu, X, Sparkles, LogOut } from "lucide-react";
+import { useAuth } from "@/context/auth/useAuth";
 
 const MOBILE_LINKS: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/search", label: "Search" },
-  { href: "/auth", label: "Auth" },
   { href: "/client", label: "Client" },
   { href: "/provider", label: "Provider" },
   { href: "/wallet", label: "Wallet" },
@@ -15,8 +15,22 @@ const MOBILE_LINKS: { href: string; label: string }[] = [
   { href: "/admin", label: "Admin" },
 ];
 
+function dashboardFor(role?: string) {
+  if (role === "PROVIDER") return "/provider";
+  if (role === "ADMIN") return "/admin";
+  return "/client";
+}
+
 export default function Nav() {
   const [mob, setMob] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+
+  const displayName =
+    user?.firstName || user?.email?.split("@")[0] || "Account";
+  const initial = (user?.firstName || user?.email || "?")
+    .charAt(0)
+    .toUpperCase();
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -31,20 +45,29 @@ export default function Nav() {
         <nav className="hidden md:flex items-center gap-1">
           <Link href="/search" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Find Cleaners</Link>
           <Link href="/" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">How It Works</Link>
-          <Link href="/auth" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Become a Pro</Link>
+          <Link href="/auth?mode=signup&role=provider" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Become a Pro</Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/messages" className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
-            <MessageSquare className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-teal-500 rounded-full ring-1 ring-white" />
-          </Link>
-          <Link href="/wallet" className="hidden sm:flex p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><Wallet className="w-5 h-5" /></Link>
-          <Link href="/client" className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-            <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 text-xs font-bold">A</div> Alexandra
-          </Link>
-          <Link href="/search" className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors shadow-sm shadow-teal-200">
-            <Search className="w-3.5 h-3.5" /> Book Now
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link href="/messages" className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+                <MessageSquare className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-teal-500 rounded-full ring-1 ring-white" />
+              </Link>
+              <Link href="/wallet" className="hidden sm:flex p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><Wallet className="w-5 h-5" /></Link>
+              <Link href={dashboardFor(user?.role)} className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 text-xs font-bold">{initial}</div> {displayName}
+              </Link>
+              <button onClick={logout} title="Sign out" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><LogOut className="w-5 h-5" /></button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth?mode=login" className="hidden sm:flex px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Sign in</Link>
+              <Link href="/search" className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors shadow-sm shadow-teal-200">
+                <Search className="w-3.5 h-3.5" /> Book Now
+              </Link>
+            </>
+          )}
           <button onClick={() => setMob(!mob)} className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100">
             {mob ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -57,6 +80,11 @@ export default function Nav() {
               {l.label}
             </Link>
           ))}
+          {isAuthenticated && (
+            <button onClick={() => { setMob(false); logout(); }} className="text-left px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg">
+              Sign out
+            </button>
+          )}
         </div>
       )}
     </header>

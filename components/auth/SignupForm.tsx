@@ -7,6 +7,7 @@ import { Camera, Shield, Eye, EyeOff, CheckCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { SERVICE_CATS } from "@/lib/data";
 import type { Role } from "./types";
+import { useRegister } from "@/lib/queries/auth";
 
 const PROVIDER_STEPS = ["Basic Info", "Verify ID", "Services", "Pricing", "Done"];
 
@@ -15,13 +16,42 @@ export default function SignupForm({ role }: { role: Role }) {
   const [showPass, setShowPass] = useState(false);
   const router = useRouter();
 
+  // Basic-info fields (shared by both roles).
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+
+  const { mutate: register, isPending, error } = useRegister();
+
   const goNext = () => {
-    if (role === "provider" && step < PROVIDER_STEPS.length - 1) {
+    if (role === "client") {
+      register(
+        { firstName, lastName, email, phone, password, role: "CLIENT" },
+        { onSuccess: () => router.push("/client") },
+      );
+      return;
+    }
+
+    // Provider: create the account when leaving the Basic Info step, then
+    // continue through the (visual) onboarding wizard.
+    if (step === 0) {
+      register(
+        { firstName, lastName, email, phone, password, role: "PROVIDER" },
+        { onSuccess: () => setStep(1) },
+      );
+      return;
+    }
+    if (step < PROVIDER_STEPS.length - 1) {
       setStep((s) => s + 1);
     } else {
-      router.push(role === "client" ? "/client" : "/provider");
+      router.push("/provider");
     }
   };
+
+  const inputClass =
+    "w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all";
 
   return (
     <Card className="w-full max-w-lg p-8">
@@ -42,19 +72,29 @@ export default function SignupForm({ role }: { role: Role }) {
       {(role === "client" || step === 0) && (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            {[["First name", "Alexandra"], ["Last name", "Park"]].map(([l, v]) => (
-              <div key={l}><label className="text-xs font-bold text-slate-700 mb-1.5 block">{l}</label><input defaultValue={v} className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all" /></div>
-            ))}
+            <div>
+              <label className="text-xs font-bold text-slate-700 mb-1.5 block">First name</label>
+              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Alexandra" className={inputClass} />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 mb-1.5 block">Last name</label>
+              <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Park" className={inputClass} />
+            </div>
           </div>
           <div className="space-y-3 mb-5">
-            {[["Email address", "alex.park@email.com", "email"], ["Phone number", "+1 (416) 555-0182", "tel"]].map(([l, v, t]) => (
-              <div key={l}><label className="text-xs font-bold text-slate-700 mb-1.5 block">{l}</label><input type={t} defaultValue={v} className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all" /></div>
-            ))}
+            <div>
+              <label className="text-xs font-bold text-slate-700 mb-1.5 block">Email address</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className={inputClass} />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 mb-1.5 block">Phone number</label>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (416) 555-0182" className={inputClass} />
+            </div>
             <div>
               <label className="text-xs font-bold text-slate-700 mb-1.5 block">Password</label>
               <div className="relative">
-                <input type={showPass ? "text" : "password"} defaultValue="password123" className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none pr-10 transition-all" />
-                <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+                <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" className={`${inputClass} pr-10`} />
+                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
               </div>
             </div>
           </div>
@@ -96,7 +136,7 @@ export default function SignupForm({ role }: { role: Role }) {
             <div key={l}>
               <label className="text-xs font-bold text-slate-700 mb-1.5 block">{l}</label>
               <div className="relative">
-                <input defaultValue={v} className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none pl-8 transition-all" />
+                <input defaultValue={v} className={`${inputClass} pl-8`} />
                 {prefix && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-semibold">{prefix}</span>}
               </div>
             </div>
@@ -112,8 +152,10 @@ export default function SignupForm({ role }: { role: Role }) {
         </div>
       )}
 
-      <button onClick={goNext} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl transition-colors text-sm shadow-sm shadow-teal-200">
-        {role === "provider" ? (step === 4 ? "Go to Dashboard" : "Continue") : "Create Account"}
+      {error && <p className="text-xs text-red-600 font-semibold mb-3">{(error as Error).message}</p>}
+
+      <button onClick={goNext} disabled={isPending} className="w-full bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-colors text-sm shadow-sm shadow-teal-200">
+        {isPending ? "Please wait…" : role === "provider" ? (step === 4 ? "Go to Dashboard" : "Continue") : "Create Account"}
       </button>
       {role !== "provider" && (
         <p className="text-center text-xs text-slate-500 mt-4" style={{ fontFamily: "'Inter', sans-serif" }}>

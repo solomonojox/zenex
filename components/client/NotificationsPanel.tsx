@@ -1,21 +1,40 @@
-import { CheckCircle, MessageSquare, Star } from "lucide-react";
+"use client";
+
+import { CheckCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
+import { useMyBookings } from "@/lib/queries/bookings";
 
-const NOTIFICATIONS = [
-  { I: CheckCircle, c: "text-emerald-500", t: "Booking BK-2841 confirmed by Maria Santos", s: "2m ago" },
-  { I: MessageSquare, c: "text-teal-500", t: "New message from Maria Santos", s: "5m ago" },
-  { I: Star, c: "text-amber-500", t: "Rate your June 23 cleaning with David Chen", s: "2d ago" },
-];
-
+// Note: the API has no dedicated notifications endpoint yet, so this derives
+// lightweight activity from the client's recent bookings.
 export default function NotificationsPanel() {
+  const { data } = useMyBookings();
+  const recent = (data?.items ?? []).slice(0, 4);
+
   return (
     <Card className="p-5">
-      <h3 className="font-bold text-slate-900 mb-4">Notifications</h3>
-      <div className="space-y-3.5">
-        {NOTIFICATIONS.map(({ I, c, t, s }) => (
-          <div key={t} className="flex items-start gap-2.5"><I className={`w-4 h-4 ${c} shrink-0 mt-0.5`} /><div><p className="text-xs text-slate-700 leading-snug">{t}</p><span className="text-xs text-slate-400">{s}</span></div></div>
-        ))}
-      </div>
+      <h3 className="font-bold text-slate-900 mb-4">Recent activity</h3>
+      {recent.length === 0 ? (
+        <p className="text-xs text-slate-400">No activity yet.</p>
+      ) : (
+        <div className="space-y-3.5">
+          {recent.map((b) => {
+            const provider = b.provider?.user
+              ? `${b.provider.user.firstName} ${b.provider.user.lastName}`
+              : "your pro";
+            return (
+              <div key={b.id} className="flex items-start gap-2.5">
+                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-slate-700 leading-snug">
+                    Booking {b.reference} · {b.status.toLowerCase()} with {provider}
+                  </p>
+                  <span className="text-xs text-slate-400">{b.service?.name ?? "Cleaning"}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }
