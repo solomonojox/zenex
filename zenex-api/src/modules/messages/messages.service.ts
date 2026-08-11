@@ -7,12 +7,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { MessagesGateway } from './messages.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: MessagesGateway,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Resolve the caller's messaging identity (client or provider profile id). */
@@ -154,6 +156,29 @@ export class MessagesService {
 
     // Push in real time to anyone in the thread room.
     this.gateway.emitNewMessage(threadId, message);
+
+    // Notify the recipient (the participant who isn't the sender).
+    const thread = await this.prisma.messageThread.findUnique({
+      where: { id: threadId },
+    });
+    if (thread) {
+      const [clientUserId, providerUserId] = await Promise.all([
+        this.notifications.userIdForClient(thread.clientId),
+        this.notifications.userIdForProvider(thread.providerId),
+      ]);
+      const recipient = [clientUserId, providerUserId].find(
+        (id) => id && id !== user.id,
+      );
+      if (recipient) {
+        await this.notifications.notify({
+          userId: recipient,
+          type: 'message',
+          title: 'New message',
+          body: body.slice(0, 120),
+        });
+      }
+    }
+
     return message;
   }
 

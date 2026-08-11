@@ -9,6 +9,7 @@ import {
   useAddTimeOff,
   useRemoveTimeOff,
 } from "@/lib/queries/availability";
+import { formatBookingShort, localInputToUtcIso } from "@/lib/utils/datetime";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -73,8 +74,9 @@ export default function AvailabilityTab() {
     if (!offStart || !offEnd) return;
     addTimeOff.mutate(
       {
-        startsAt: new Date(offStart).toISOString(),
-        endsAt: new Date(offEnd).toISOString(),
+        // Interpreted as UTC so it lines up with how slots are anchored.
+        startsAt: localInputToUtcIso(offStart),
+        endsAt: localInputToUtcIso(offEnd),
         reason: offReason.trim() || undefined,
       },
       { onSuccess: () => { setOffStart(""); setOffEnd(""); setOffReason(""); } },
@@ -156,9 +158,7 @@ export default function AvailabilityTab() {
               <div key={t.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 ring-1 ring-slate-100">
                 <div className="flex-1 text-sm">
                   <div className="font-semibold text-slate-800">
-                    {new Date(t.startsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                    {" → "}
-                    {new Date(t.endsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    {formatBookingShort(t.startsAt)} → {formatBookingShort(t.endsAt)}
                   </div>
                   {t.reason && <div className="text-xs text-slate-400">{t.reason}</div>}
                 </div>

@@ -12,6 +12,7 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { AvailabilityService } from '../availability/availability.service';
 import { calculateTax } from '../../common/tax/canadian-tax';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // Relations returned with a booking so the frontend has everything it needs.
 const bookingInclude = {
@@ -31,6 +32,7 @@ export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly availability: AvailabilityService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private genReference(): string {
@@ -101,7 +103,7 @@ export class BookingsService {
       );
     }
 
-    return this.prisma.booking.create({
+    const created = await this.prisma.booking.create({
       data: {
         reference: this.genReference(),
         tenant: { connect: { id: provider.tenantId } },
@@ -130,6 +132,30 @@ export class BookingsService {
       },
       include: bookingInclude,
     });
+
+    // Tell both sides. Failures here never affect the booking itself.
+    const when = created.scheduledFor.toISOString().slice(0, 16).replace('T', ' ');
+    const providerUserId = await this.notifications.userIdForProvider(provider.id);
+    await this.notifications.notifyMany([
+      {
+        userId: user.id,
+        type: 'booking',
+        title: `Booking ${created.reference} ${created.status === BookingStatus.CONFIRMED ? 'confirmed' : 'requested'}`,
+        body: `${created.service?.name ?? 'Cleaning'} · ${when} UTC`,
+      },
+      ...(providerUserId
+        ? [
+            {
+              userId: providerUserId,
+              type: 'booking' as const,
+              title: `New booking ${created.reference}`,
+              body: `${created.service?.name ?? 'Cleaning'} · ${when} UTC`,
+            },
+          ]
+        : []),
+    ]);
+
+    return created;
   }
 
   /** Price preview (subtotal + tax) without creating a booking. */
@@ -225,11 +251,48 @@ export class BookingsService {
       );
     }
 
-    return this.prisma.booking.update({
+    const updated = await this.prisma.booking.update({
       where: { id },
       data: { status: BookingStatus.CANCELLED },
       include: bookingInclude,
     });
+
+    // Notify the other party (whoever didn't cancel).
+    await this.notifyBothParties(updated, {
+      title: `Booking ${updated.reference} cancelled`,
+      body: updated.service?.name ?? 'Cleaning',
+      type: 'booking',
+      exceptUserId: user.id,
+    });
+
+    return updated;
+  }
+
+  /** Send a notification to the booking's client and provider. */
+  private async notifyBothParties(
+    booking: { clientId: string; providerId: string },
+    opts: {
+      title: string;
+      body?: string;
+      type?: 'booking' | 'payment' | 'review';
+      exceptUserId?: string;
+    },
+  ) {
+    const [clientUserId, providerUserId] = await Promise.all([
+      this.notifications.userIdForClient(booking.clientId),
+      this.notifications.userIdForProvider(booking.providerId),
+    ]);
+    const targets = [clientUserId, providerUserId].filter(
+      (id): id is string => !!id && id !== opts.exceptUserId,
+    );
+    await this.notifications.notifyMany(
+      targets.map((userId) => ({
+        userId,
+        title: opts.title,
+        body: opts.body,
+        type: opts.type ?? 'booking',
+      })),
+    );
   }
 
   /** Provider (owner) or admin advances the booking status. */
@@ -246,11 +309,34 @@ export class BookingsService {
       }
     }
 
-    return this.prisma.booking.update({
+    const updated = await this.prisma.booking.update({
       where: { id },
       data: { status },
       include: bookingInclude,
     });
+
+    // Keep the client informed as the job progresses.
+    const clientUserId = await this.notifications.userIdForClient(
+      updated.clientId,
+    );
+    if (clientUserId) {
+      const messages: Partial<Record<BookingStatus, string>> = {
+        [BookingStatus.CONFIRMED]: 'was confirmed by your pro',
+        [BookingStatus.IN_PROGRESS]: 'has started',
+        [BookingStatus.COMPLETED]: 'is complete — leave a review!',
+      };
+      const suffix = messages[status];
+      if (suffix) {
+        await this.notifications.notify({
+          userId: clientUserId,
+          type: 'booking',
+          title: `Booking ${updated.reference} ${suffix}`,
+          body: updated.service?.name ?? 'Cleaning',
+        });
+      }
+    }
+
+    return updated;
   }
 
   /** Ensures the caller owns the booking (client or provider) or is admin. */

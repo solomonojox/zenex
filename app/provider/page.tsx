@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
+import NotificationBell from "@/components/nav/NotificationBell";
 import { useAuth } from "@/context/auth/useAuth";
 import { useMe } from "@/lib/queries/users";
 import OverviewTab from "@/components/provider/OverviewTab";
@@ -48,7 +49,7 @@ export default function ProviderDashboardPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="relative p-2.5 rounded-xl ring-1 ring-slate-200 bg-white text-slate-500"><Bell className="w-5 h-5" /><span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" /></button>
+            <div className="p-1 rounded-xl ring-1 ring-slate-200 bg-white"><NotificationBell /></div>
             <button className="p-2.5 rounded-xl ring-1 ring-slate-200 bg-white text-slate-500"><Settings className="w-5 h-5" /></button>
           </div>
         </div>

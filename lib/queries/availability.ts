@@ -6,8 +6,19 @@ import { availabilityApi, AvailabilityRule } from "@/lib/api/availability";
 export const availabilityKeys = {
   slots: (providerId: string, date: string, duration?: number) =>
     ["availability", "slots", providerId, date, duration ?? 120] as const,
+  schedule: (providerId: string) =>
+    ["availability", "schedule", providerId] as const,
   mine: ["availability", "me"] as const,
 };
+
+/** Public: a provider's published weekly hours. */
+export function useProviderSchedule(providerId: string) {
+  return useQuery({
+    queryKey: availabilityKeys.schedule(providerId),
+    queryFn: () => availabilityApi.providerSchedule(providerId),
+    enabled: !!providerId,
+  });
+}
 
 export function useSlots(
   providerId: string,

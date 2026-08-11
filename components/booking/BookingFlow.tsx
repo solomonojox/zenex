@@ -7,6 +7,7 @@ import type { Provider } from "@/lib/types";
 import { EXTRAS_LIST } from "@/lib/data";
 import { useAuth } from "@/context/auth/useAuth";
 import { useCreateBooking, useCheckout, useQuote } from "@/lib/queries/bookings";
+import { formatBookingDateTime, formatBookingTime } from "@/lib/utils/datetime";
 import ProgressSteps from "./ProgressSteps";
 import ServiceStep from "./ServiceStep";
 import DateTimeStep from "./DateTimeStep";
@@ -85,15 +86,7 @@ function BookingFlowInner({ provider }: { provider: Provider }) {
     else setStep((s) => s - 1);
   };
 
-  const slotLabel = slot
-    ? new Date(slot).toLocaleString(undefined, {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : "";
+  const slotLabel = slot ? formatBookingDateTime(slot) : "";
 
   const confirmAndPay = async () => {
     if (!isAuthenticated) {
@@ -113,7 +106,7 @@ function BookingFlowInner({ provider }: { provider: Provider }) {
         serviceId: service.id,
         scheduledFor: slot,
         durationMins,
-        timeSlot: new Date(slot).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
+        timeSlot: formatBookingTime(slot),
         extras: extrasPayload,
       });
       setBookingRef(booking.reference);

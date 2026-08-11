@@ -1,10 +1,23 @@
-import { Globe, Clock, CheckCircle, Calendar } from "lucide-react";
+"use client";
+
+import { Globe, Clock, CheckCircle, CalendarDays } from "lucide-react";
 import type { Provider } from "@/lib/types";
 import Card from "@/components/ui/Card";
+import { useProviderSchedule } from "@/lib/queries/availability";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function timeLabel(mins: number) {
+  const h24 = Math.floor(mins / 60);
+  const m = mins % 60;
+  const suffix = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
 
 export default function AboutTab({ p }: { p: Provider }) {
-  const offDays = [6, 7, 13, 14, 20, 21, 27, 28];
-  const bookedDays = [4, 11, 18];
+  const { data: schedule, isLoading } = useProviderSchedule(p.id);
+  const byDay = new Map((schedule?.rules ?? []).map((r) => [r.dayOfWeek, r]));
 
   return (
     <div className="space-y-5">
@@ -13,10 +26,10 @@ export default function AboutTab({ p }: { p: Provider }) {
         <p className="text-slate-600 text-sm leading-relaxed mb-5" style={{ fontFamily: "'Inter', sans-serif" }}>{p.bio}</p>
         <div className="grid grid-cols-2 gap-4">
           {[
-            { I: Globe, l: "Languages", v: p.languages.join(", ") },
-            { I: Clock, l: "Response time", v: p.responseTime },
+            { I: Globe, l: "Languages", v: p.languages.join(", ") || "—" },
+            { I: Clock, l: "Response time", v: p.responseTime || "—" },
             { I: CheckCircle, l: "Jobs completed", v: p.completions.toLocaleString() },
-            { I: Calendar, l: "Member since", v: "March 2019" },
+            { I: CalendarDays, l: "Reviews", v: String(p.reviews) },
           ].map(({ I, l, v }) => (
             <div key={l} className="flex items-start gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0"><I className="w-4 h-4 text-teal-600" /></div>
@@ -25,20 +38,30 @@ export default function AboutTab({ p }: { p: Provider }) {
           ))}
         </div>
       </Card>
+
       <Card className="p-5">
-        <h3 className="font-bold text-slate-900 mb-4">Availability · July 2025</h3>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs">
-          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} className="font-bold text-slate-400 py-1">{d}</div>)}
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
-            const off = offDays.includes(d);
-            const booked = bookedDays.includes(d);
-            return (
-              <button key={d} disabled={off || booked} className={`py-2 rounded-lg font-semibold transition-colors ${off ? "text-slate-200" : booked ? "bg-rose-50 text-rose-300 cursor-not-allowed" : "bg-teal-50 text-teal-700 hover:bg-teal-600 hover:text-white"}`}>
-                {d}
-              </button>
-            );
-          })}
-        </div>
+        <h3 className="font-bold text-slate-900 mb-4">Weekly availability</h3>
+        {isLoading ? (
+          <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-7 rounded-lg bg-slate-100 animate-pulse" />)}</div>
+        ) : (schedule?.rules?.length ?? 0) === 0 ? (
+          <p className="text-sm text-slate-400">This pro hasn&apos;t published their hours yet — message them to arrange a time.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {DAYS.map((name, i) => {
+              const rule = byDay.get(i);
+              return (
+                <div key={name} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-50 last:border-0">
+                  <span className="text-slate-600">{name}</span>
+                  {rule ? (
+                    <span className="font-semibold text-slate-900">{timeLabel(rule.startMinute)} – {timeLabel(rule.endMinute)}</span>
+                  ) : (
+                    <span className="text-slate-300">Unavailable</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </div>
   );

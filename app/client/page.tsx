@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Repeat, Wallet, ChevronRight, MessageSquare } from "lucide-react";
 import { useAuth } from "@/context/auth/useAuth";
 import { useMyBookings } from "@/lib/queries/bookings";
+import { formatBookingDate } from "@/lib/utils/datetime";
 import StatsGrid from "@/components/client/StatsGrid";
 import BookingsList from "@/components/client/BookingsList";
 import FavoriteProsList from "@/components/client/FavoriteProsList";
@@ -71,7 +72,7 @@ export default function ClientDashboardPage() {
             <img src={upcomingImg} alt={upcomingProvider} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/30 shrink-0" />
             <div className="flex-1">
               <div className="text-xs font-bold text-teal-200 uppercase tracking-widest mb-1">
-                Next booking · {new Date(upcoming.scheduledFor).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                Next booking · {formatBookingDate(upcoming.scheduledFor)}
               </div>
               <div className="font-extrabold text-white text-xl">{upcoming.service?.name ?? "Cleaning"}</div>
               <div className="text-teal-100 text-sm mt-0.5">{upcomingProvider}{upcoming.timeSlot ? ` · ${upcoming.timeSlot}` : ""}</div>
