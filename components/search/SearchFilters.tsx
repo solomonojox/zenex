@@ -11,10 +11,17 @@ export interface SearchFilterState {
   tags: string[];
   layout: "grid" | "list";
   minRating: number;
+  /** Free-text city/province, sent to the API as a filter. */
+  location: string;
 }
 
 export default function SearchFilters({ value, onChange }: { value: SearchFilterState; onChange: (v: SearchFilterState) => void }) {
-  const [location, setLocation] = useState("Toronto, ON");
+  // Local mirror so typing stays snappy; committed on blur/Enter.
+  const [location, setLocation] = useState(value.location);
+
+  const commitLocation = () => {
+    if (location !== value.location) onChange({ ...value, location });
+  };
 
   const toggleTag = (t: string) => {
     onChange({ ...value, tags: value.tags.includes(t) ? value.tags.filter((x) => x !== t) : [...value.tags, t] });
@@ -25,7 +32,24 @@ export default function SearchFilters({ value, onChange }: { value: SearchFilter
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 flex-1 min-w-[160px] max-w-xs ring-1 ring-slate-200 focus-within:ring-teal-400 transition-all">
           <MapPin className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-          <input value={location} onChange={(e) => setLocation(e.target.value)} className="bg-transparent text-sm font-medium outline-none w-full text-slate-800" />
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            onBlur={commitLocation}
+            onKeyDown={(e) => e.key === "Enter" && commitLocation()}
+            placeholder="City or province"
+            aria-label="Filter by location"
+            className="bg-transparent text-sm font-medium outline-none w-full text-slate-800"
+          />
+          {value.location && (
+            <button
+              onClick={() => { setLocation(""); onChange({ ...value, location: "" }); }}
+              aria-label="Clear location"
+              className="text-slate-400 hover:text-slate-600 text-xs font-bold shrink-0"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <select value={value.sort} onChange={(e) => onChange({ ...value, sort: e.target.value })} className="bg-white ring-1 ring-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none cursor-pointer hover:ring-teal-300 transition-colors">
           {SORT_OPTIONS.map((s) => <option key={s}>{s}</option>)}

@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { QuoteDto } from './dto/quote.dto';
+import { Public } from '../../common/decorators/public.decorator';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -30,6 +32,13 @@ export class BookingsController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateBookingDto) {
     return this.bookingsService.create(user, dto);
+  }
+
+  /** Public price preview including sales tax. */
+  @Public()
+  @Post('quote')
+  quote(@Body() dto: QuoteDto) {
+    return this.bookingsService.quote(dto);
   }
 
   @Get()

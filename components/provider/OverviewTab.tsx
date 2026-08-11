@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, TrendingUp, Briefcase, CheckCircle } from "lucide-react";
+import { Wallet, TrendingUp, Briefcase, CheckCircle, ShieldAlert } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart as RechartsPie, Pie, Cell,
@@ -8,6 +8,7 @@ import {
 import Card from "@/components/ui/Card";
 import { useMyBookings } from "@/lib/queries/bookings";
 import { useWallet, useTransactions } from "@/lib/queries/wallet";
+import { useMyVerification } from "@/lib/queries/verifications";
 
 const PIE_COLORS = ["#0D9488", "#10B981", "#3B82F6", "#8B5CF6", "#94A3B8"];
 
@@ -15,6 +16,7 @@ export default function OverviewTab() {
   const { data: wallet } = useWallet();
   const { data: txns = [] } = useTransactions();
   const { data: bookingsData } = useMyBookings();
+  const { data: verification } = useMyVerification();
   const bookings = bookingsData?.items ?? [];
 
   const now = new Date();
@@ -56,6 +58,19 @@ export default function OverviewTab() {
 
   return (
     <div className="space-y-5">
+      {/* Nudge providers who skipped verification during signup. */}
+      {!verification && (
+        <Card className="p-4 flex items-start gap-3 ring-1 ring-amber-200 bg-amber-50">
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-bold text-sm text-amber-900">Get verified to win more work</div>
+            <p className="text-xs text-amber-800 mt-0.5">
+              Upload your ID and insurance in the <strong>Verification</strong> tab — verified pros get a badge and rank higher in search.
+            </p>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {kpis.map(({ l, v, Icon }) => (
           <Card key={l} className="p-5">

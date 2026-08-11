@@ -14,7 +14,7 @@ export interface AuthContextType {
   companyLogo: string;
   user: UserData | null;
   authLoading: boolean
-  login: (token: string) => void;
+  login: (token: string, refreshToken?: string) => void;
   logout: () => void;
   setReady: React.Dispatch<React.SetStateAction<boolean>>;
   ready: boolean;

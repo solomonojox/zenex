@@ -165,6 +165,28 @@ async function main() {
     },
   });
 
+  // Default weekly availability for every provider: Mon–Sat, 8:00–18:00.
+  const allProviders = await prisma.providerProfile.findMany({
+    where: { tenantId: tenant.id },
+    select: { id: true },
+  });
+  for (const p of allProviders) {
+    const existing = await prisma.availabilityRule.count({
+      where: { providerId: p.id },
+    });
+    if (existing === 0) {
+      await prisma.availabilityRule.createMany({
+        data: [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+          providerId: p.id,
+          dayOfWeek,
+          startMinute: 8 * 60,
+          endMinute: 18 * 60,
+        })),
+      });
+    }
+  }
+  console.log(`  availability set for ${allProviders.length} providers`);
+
   // Subscription plans (only if none exist for this tenant yet)
   const planCount = await prisma.subscriptionPlan.count({
     where: { tenantId: tenant.id },

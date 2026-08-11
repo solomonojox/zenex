@@ -28,4 +28,13 @@ export const authApi = {
 
   logout: async (): Promise<{ loggedOut: boolean }> =>
     (await axios.post("/auth/logout")).data,
+
+  forgotPassword: async (email: string): Promise<{ message: string }> =>
+    (await axios.post("/auth/forgot-password", { email })).data,
+
+  resetPassword: async (
+    token: string,
+    password: string,
+  ): Promise<{ message: string }> =>
+    (await axios.post("/auth/reset-password", { token, password })).data,
 };

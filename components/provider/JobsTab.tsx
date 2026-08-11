@@ -5,20 +5,13 @@ import { MapPin, Calendar, Clock, MessageSquare, Banknote, ChevronRight } from "
 import Card from "@/components/ui/Card";
 import StatusPill from "@/components/ui/StatusPill";
 import { useMyBookings, useUpdateBookingStatus } from "@/lib/queries/bookings";
+import { formatBookingDate as fmtDate } from "@/lib/utils/datetime";
 
 const NEXT_ACTION: Record<string, { label: string; status: string } | undefined> = {
   PENDING: { label: "Accept", status: "CONFIRMED" },
   CONFIRMED: { label: "Start", status: "IN_PROGRESS" },
   IN_PROGRESS: { label: "Complete", status: "COMPLETED" },
 };
-
-function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  } catch {
-    return "";
-  }
-}
 
 function initials(name: string) {
   return name.split(" ").map((w) => w[0]).filter(Boolean).join("").slice(0, 2).toUpperCase();

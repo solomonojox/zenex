@@ -41,6 +41,12 @@ export class CreateBookingDto {
   @Min(1)
   hours?: number;
 
+  /** Job length in minutes; used for availability conflict checks. */
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  durationMins?: number;
+
   @IsOptional()
   @IsString()
   address?: string;

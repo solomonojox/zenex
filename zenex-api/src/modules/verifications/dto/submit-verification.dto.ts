@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsDateString,
   IsOptional,
   IsString,
   ValidateNested,
@@ -14,6 +15,11 @@ export class VerificationDocumentDto {
   // Storage path returned by POST /verifications/documents, or a full URL.
   @IsString()
   url: string;
+
+  /** Expiry date (mainly for insurance certificates). */
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string;
 }
 
 export class SubmitVerificationDto {

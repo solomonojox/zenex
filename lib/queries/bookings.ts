@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { bookingsApi, CreateBookingInput } from "@/lib/api/bookings";
+import { bookingsApi, CreateBookingInput, BookingExtraInput } from "@/lib/api/bookings";
 import { paymentsApi } from "@/lib/api/payments";
 
 export const bookingKeys = {
@@ -13,6 +13,19 @@ export function useMyBookings(status?: string) {
   return useQuery({
     queryKey: bookingKeys.list(status),
     queryFn: () => bookingsApi.list(status ? { status } : undefined),
+  });
+}
+
+/** Live price preview including sales tax. */
+export function useQuote(
+  providerId: string,
+  serviceId: string | undefined,
+  extras: BookingExtraInput[],
+) {
+  return useQuery({
+    queryKey: ["bookings", "quote", providerId, serviceId, extras],
+    queryFn: () => bookingsApi.quote({ providerId, serviceId, extras }),
+    enabled: !!providerId,
   });
 }
 

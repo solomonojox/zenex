@@ -117,6 +117,7 @@ model User {
   providerProfile ProviderProfile?
   wallet          Wallet?
   refreshTokens   RefreshToken[]
+  passwordResets  PasswordResetToken[]
   notifications   Notification[]
   favorites       Favorite[]
   sentMessages    Message[]        @relation("MessageSender")
@@ -124,6 +125,21 @@ model User {
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("users")
+}
+
+/// Single-use, time-limited token emailed for password resets.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model RefreshToken {
@@ -189,10 +205,48 @@ model ProviderProfile {
   payouts              Payout[]
   verificationRequests VerificationRequest[]
   favoritedBy          Favorite[]
+  availability         AvailabilityRule[]
+  timeOff              TimeOff[]
 
   @@index([tenantId])
   @@index([location])
   @@map("provider_profiles")
+}
+
+// ─────────────── Availability ───────────────
+
+/// A provider's recurring weekly working window (one row per weekday).
+/// Times are minutes from midnight in the provider's local day
+/// (e.g. 480 = 08:00, 1020 = 17:00).
+model AvailabilityRule {
+  id          String   @id @default(cuid())
+  providerId  String
+  dayOfWeek   Int // 0 = Sunday … 6 = Saturday
+  startMinute Int
+  endMinute   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, dayOfWeek])
+  @@index([providerId])
+  @@map("availability_rules")
+}
+
+/// An explicit block of unavailable time (holiday, appointment, etc.).
+model TimeOff {
+  id         String   @id @default(cuid())
+  providerId String
+  startsAt   DateTime
+  endsAt     DateTime
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("time_off")
 }
 
 // ─────────────── Catalog ───────────────
@@ -245,13 +299,21 @@ model Booking {
   providerId   String
   serviceId    String?
   scheduledFor DateTime
+  durationMins Int           @default(120) // used for overlap/conflict checks
   timeSlot     String? // e.g. "9:00 AM – 1:00 PM"
   status       BookingStatus @default(PENDING)
   basePrice    Float
   extrasTotal  Float         @default(0)
-  totalPrice   Float
+  // Canadian sales tax, resolved from the service province at booking time.
+  taxAmount    Float         @default(0)
+  taxRate      Float         @default(0)
+  taxLabel     String?
+  province     String?
+  totalPrice   Float // subtotal (base + extras) + tax — the amount charged
   address      String?
   notes        String?
+  /// Set when the 24h reminder has gone out, so it only sends once.
+  reminderSentAt DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -462,6 +524,8 @@ model Document {
   requestId   String
   type        String // "ID", "Insurance", "Background check", "Business Reg."
   url         String
+  /// Coverage/validity end date — used to flag expiring insurance.
+  expiresAt   DateTime?
   uploadedAt  DateTime @default(now())
 
   request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)

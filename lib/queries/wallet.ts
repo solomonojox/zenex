@@ -31,6 +31,20 @@ export function usePayouts(enabled = true) {
   });
 }
 
+export function useConnectStatus(enabled = true) {
+  return useQuery({
+    queryKey: ["payments", "connect", "status"],
+    queryFn: paymentsApi.connectStatus,
+    enabled,
+  });
+}
+
+export function useConnectOnboarding() {
+  return useMutation({
+    mutationFn: (returnUrl: string) => paymentsApi.connectOnboarding(returnUrl),
+  });
+}
+
 export function useRequestPayout() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,9 +1,44 @@
+import Link from "next/link";
 import { Languages, Sparkles } from "lucide-react";
 
-const FOOTER_COLS: { t: string; l: string[] }[] = [
-  { t: "Services", l: ["Home Cleaning", "Office Cleaning", "Deep Cleaning", "Move In/Out", "Recurring Plans", "Post-Reno"] },
-  { t: "Company", l: ["About Us", "Careers", "Blog", "Press", "Partnerships"] },
-  { t: "Support", l: ["Help Center", "Safety", "Contact Us", "Trust & Safety", "Accessibility"] },
+// Only real destinations are linked; the rest stay as plain text rather than
+// pretending to be clickable.
+const FOOTER_COLS: { t: string; l: { label: string; href?: string }[] }[] = [
+  {
+    t: "Services",
+    l: [
+      { label: "Home Cleaning", href: "/search" },
+      { label: "Office Cleaning", href: "/search" },
+      { label: "Deep Cleaning", href: "/search" },
+      { label: "Move In/Out", href: "/search" },
+      { label: "Recurring Plans", href: "/#plans" },
+      { label: "Post-Reno", href: "/search" },
+    ],
+  },
+  {
+    t: "Company",
+    l: [
+      { label: "Become a Pro", href: "/auth?mode=signup&role=provider" },
+      { label: "About Us" },
+      { label: "Careers" },
+      { label: "Blog" },
+    ],
+  },
+  {
+    t: "Support",
+    l: [
+      { label: "Help Center" },
+      { label: "Trust & Safety" },
+      { label: "Contact Us" },
+      { label: "Accessibility" },
+    ],
+  },
+];
+
+const LEGAL_LINKS = [
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
+  { label: "Cookies", href: "/cookies" },
 ];
 
 export default function Footer() {
@@ -25,13 +60,27 @@ export default function Footer() {
           {FOOTER_COLS.map((col) => (
             <div key={col.t}>
               <div className="font-bold text-white text-sm mb-3">{col.t}</div>
-              <ul className="space-y-2">{col.l.map((l) => <li key={l}><a href="#" className="text-sm hover:text-teal-400 transition-colors" style={{ fontFamily: "'Inter', sans-serif" }}>{l}</a></li>)}</ul>
+              <ul className="space-y-2">
+                {col.l.map((l) => (
+                  <li key={l.label}>
+                    {l.href ? (
+                      <Link href={l.href} className="text-sm hover:text-teal-400 transition-colors" style={{ fontFamily: "'Inter', sans-serif" }}>{l.label}</Link>
+                    ) : (
+                      <span className="text-sm text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>{l.label}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
         <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>
-          <span>© 2025 Zenex Inc. All rights reserved. 🍁 Proudly Canadian.</span>
-          <div className="flex items-center gap-4">{["Privacy", "Terms", "Cookies", "Sitemap"].map((l) => <a key={l} href="#" className="hover:text-teal-400 transition-colors">{l}</a>)}</div>
+          <span>© {new Date().getFullYear()} Zenex Inc. All rights reserved. 🍁 Proudly Canadian.</span>
+          <div className="flex items-center gap-4">
+            {LEGAL_LINKS.map((l) => (
+              <Link key={l.label} href={l.href} className="hover:text-teal-400 transition-colors">{l.label}</Link>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

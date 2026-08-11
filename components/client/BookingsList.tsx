@@ -7,14 +7,7 @@ import Card from "@/components/ui/Card";
 import StatusPill from "@/components/ui/StatusPill";
 import { useMyBookings, useCancelBooking } from "@/lib/queries/bookings";
 import { useCreateReview } from "@/lib/queries/reviews";
-
-function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  } catch {
-    return "";
-  }
-}
+import { formatBookingDate as fmtDate } from "@/lib/utils/datetime";
 
 export default function BookingsList() {
   const { data, isLoading } = useMyBookings();

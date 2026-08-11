@@ -8,10 +8,14 @@ import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /** A client reviews one of their COMPLETED bookings (one review per booking). */
   async create(user: AuthUser, dto: CreateReviewDto) {
@@ -39,7 +43,7 @@ export class ReviewsService {
     }
 
     // Create the review and recompute the provider's rating atomically.
-    return this.prisma.$transaction(async (tx) => {
+    const review = await this.prisma.$transaction(async (tx) => {
       const created = await tx.review.create({
         data: {
           bookingId: booking.id,
@@ -66,6 +70,21 @@ export class ReviewsService {
 
       return created;
     });
+
+    // Let the provider know they were reviewed.
+    const providerUserId = await this.notifications.userIdForProvider(
+      booking.providerId,
+    );
+    if (providerUserId) {
+      await this.notifications.notify({
+        userId: providerUserId,
+        type: 'review',
+        title: `You received a ${dto.rating}★ review`,
+        body: dto.comment?.slice(0, 120),
+      });
+    }
+
+    return review;
   }
 
   /** Public list of a provider's reviews. */

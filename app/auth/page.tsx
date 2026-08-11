@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import RoleSelect from "@/components/auth/RoleSelect";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
+import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import type { Role } from "@/components/auth/types";
 
 // Auth flow is a single route (/auth) with `mode` and `role` query params so
@@ -19,6 +20,7 @@ function AuthContent() {
   return (
     <>
       {mode === "login" && <LoginForm />}
+      {mode === "forgot" && <ForgotPasswordForm />}
       {mode === "signup" && role && <SignupForm role={role} />}
       {(mode === "role" || (mode === "signup" && !role)) && (
         <RoleSelect onSelect={(r) => router.push(`/auth?mode=signup&role=${r}`)} />

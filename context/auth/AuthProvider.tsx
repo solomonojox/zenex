@@ -7,9 +7,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "./auth-context";
 import { UserData, AuthContextType } from "./auth-types";
-import axiosInstance from "@/utils/tokenAxios";
-
-const TOKEN_KEY = "zenexUserToken";
+import axiosInstance, { TOKEN_KEY, REFRESH_KEY } from "@/utils/tokenAxios";
 
 // The Zenex API issues plain JWT claims (not the old .NET-style claim URIs).
 interface JwtClaims {
@@ -74,23 +72,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (token) {
       try {
         const c = jwtDecode<JwtClaims>(token);
-        if (c.exp && c.exp * 1000 < Date.now()) {
+        const expired = !!c.exp && c.exp * 1000 < Date.now();
+        const hasRefresh = !!localStorage.getItem(REFRESH_KEY);
+
+        if (expired && !hasRefresh) {
+          // Nothing to renew with — treat as signed out.
           localStorage.removeItem(TOKEN_KEY);
         } else {
+          // If the access token is stale but a refresh token exists, restore
+          // the session optimistically; the axios interceptor swaps in a new
+          // access token on the first 401 (fetchMe below triggers it).
           applyToken(token);
           setCompanyLogo(storedLogo || "");
           fetchMe();
         }
       } catch {
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_KEY);
       }
     }
     setAuthLoading(false);
   }, [applyToken, fetchMe]);
 
   const login = useCallback(
-    (token: string) => {
+    (token: string, refreshToken?: string) => {
       localStorage.setItem(TOKEN_KEY, token);
+      // Stored so the axios interceptor can silently refresh expired sessions.
+      if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
       // Drop any previous user's cached queries so the new user never sees them.
       queryClient.clear();
       applyToken(token);
@@ -100,7 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    // Revoke server-side refresh tokens too, so the session can't be resumed.
+    // Fire-and-forget: local sign-out must succeed even if the call fails.
+    axiosInstance.post("/auth/logout").catch(() => undefined);
+
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     setUser(null);
     setIsAuthenticated(false);
     queryClient.clear();

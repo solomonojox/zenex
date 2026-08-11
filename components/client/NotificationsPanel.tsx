@@ -1,34 +1,42 @@
 "use client";
 
-import { CheckCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
-import { useMyBookings } from "@/lib/queries/bookings";
+import { useNotifications, useMarkAllRead } from "@/lib/queries/notifications";
+import { notificationIcon, timeAgo } from "@/lib/utils/notifications";
 
-// Note: the API has no dedicated notifications endpoint yet, so this derives
-// lightweight activity from the client's recent bookings.
 export default function NotificationsPanel() {
-  const { data } = useMyBookings();
-  const recent = (data?.items ?? []).slice(0, 4);
+  const { data: items = [], isLoading } = useNotifications();
+  const markAllRead = useMarkAllRead();
+  const recent = items.slice(0, 6);
+  const hasUnread = items.some((n) => !n.read);
 
   return (
     <Card className="p-5">
-      <h3 className="font-bold text-slate-900 mb-4">Recent activity</h3>
-      {recent.length === 0 ? (
-        <p className="text-xs text-slate-400">No activity yet.</p>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-slate-900">Notifications</h3>
+        {hasUnread && (
+          <button onClick={() => markAllRead.mutate()} className="text-xs font-bold text-teal-600 hover:text-teal-700">
+            Mark all read
+          </button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-8 rounded-lg bg-slate-100 animate-pulse" />)}
+        </div>
+      ) : recent.length === 0 ? (
+        <p className="text-xs text-slate-400">Nothing yet — your booking updates will show up here.</p>
       ) : (
         <div className="space-y-3.5">
-          {recent.map((b) => {
-            const provider = b.provider?.user
-              ? `${b.provider.user.firstName} ${b.provider.user.lastName}`
-              : "your pro";
+          {recent.map((n) => {
+            const { I, c } = notificationIcon(n.type);
             return (
-              <div key={b.id} className="flex items-start gap-2.5">
-                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-700 leading-snug">
-                    Booking {b.reference} · {b.status.toLowerCase()} with {provider}
-                  </p>
-                  <span className="text-xs text-slate-400">{b.service?.name ?? "Cleaning"}</span>
+              <div key={n.id} className="flex items-start gap-2.5">
+                <I className={`w-4 h-4 ${c} shrink-0 mt-0.5`} />
+                <div className="min-w-0">
+                  <p className={`text-xs leading-snug ${n.read ? "text-slate-600" : "text-slate-900 font-semibold"}`}>{n.title}</p>
+                  <span className="text-xs text-slate-400">{timeAgo(n.createdAt)}</span>
                 </div>
               </div>
             );

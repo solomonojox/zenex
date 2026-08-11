@@ -1,5 +1,7 @@
 import {
+  Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   Param,
@@ -9,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -21,7 +24,10 @@ import {
 
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly payments: PaymentsService) {}
+  constructor(
+    private readonly payments: PaymentsService,
+    private readonly config: ConfigService,
+  ) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CLIENT)
@@ -38,6 +44,30 @@ export class PaymentsController {
   @Post('payouts')
   payout(@CurrentUser() user: AuthUser) {
     return this.payments.payout(user);
+  }
+
+  /** Begin/resume Stripe Connect Express onboarding. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PROVIDER)
+  @Post('connect/onboarding')
+  connectOnboarding(
+    @CurrentUser() user: AuthUser,
+    @Body('returnUrl') returnUrl?: string,
+  ) {
+    // Fall back to the configured app URL rather than a hardcoded localhost,
+    // so Stripe redirects work in production.
+    const appUrl = this.config.get<string>('mail.appUrl') || '';
+    return this.payments.connectOnboarding(
+      user,
+      returnUrl || `${appUrl}/provider`,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PROVIDER)
+  @Get('connect/status')
+  connectStatus(@CurrentUser() user: AuthUser) {
+    return this.payments.connectStatus(user);
   }
 
   // Stripe webhook — public, needs the raw request body for signature checks.

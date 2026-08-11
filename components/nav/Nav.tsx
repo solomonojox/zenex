@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search, MessageSquare, Wallet, Menu, X, Sparkles, LogOut } from "lucide-react";
 import { useAuth } from "@/context/auth/useAuth";
+import NotificationBell from "./NotificationBell";
 
 const MOBILE_LINKS: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
@@ -50,9 +51,9 @@ export default function Nav() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
-              <Link href="/messages" className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+              <NotificationBell />
+              <Link href="/messages" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
                 <MessageSquare className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-teal-500 rounded-full ring-1 ring-white" />
               </Link>
               <Link href="/wallet" className="hidden sm:flex p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><Wallet className="w-5 h-5" /></Link>
               <Link href={dashboardFor(user?.role)} className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">

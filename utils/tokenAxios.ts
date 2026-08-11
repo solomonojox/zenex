@@ -1,5 +1,8 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { ApiUrl } from "@/config/apiConfig";
+
+export const TOKEN_KEY = "zenexUserToken";
+export const REFRESH_KEY = "zenexRefreshToken";
 
 // Create the axios instance
 const axiosInstance = axios.create({
@@ -10,50 +13,105 @@ const axiosInstance = axios.create({
   },
 });
 
-// Add a request interceptor to safely access sessionStorage in the browser
-axiosInstance.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("zenexUserToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+// Attach the bearer token and tenant header on every request.
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-    // Extract subdomain (tenant)
-    const host = window.location.hostname;
-    const parts = host.split(".");
-    let tenant: string | null = null;
-
-    if (parts.length > 1) {
-      tenant = parts[0]; // e.g. "demo"
+      // Extract subdomain (tenant)
+      const host = window.location.hostname;
+      const parts = host.split(".");
+      const tenant = parts.length > 1 ? parts[0] : null;
+      if (tenant) {
+        config.headers["x-Tenant"] = tenant;
+      }
     }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
-    if (tenant) {
-      config.headers["x-Tenant"] = tenant;
-    }
+/**
+ * Silent refresh: when a request 401s we swap the expired access token for a
+ * fresh one and replay the original request. Concurrent 401s share a single
+ * refresh call via `refreshPromise` so we never hammer the endpoint.
+ */
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const refreshToken = localStorage.getItem(REFRESH_KEY);
+  if (!refreshToken) return null;
+
+  try {
+    // Bare axios (not the instance) to avoid recursing through interceptors.
+    const res = await axios.post(`${ApiUrl}/auth/refresh`, { refreshToken });
+    const payload = res.data?.data ?? res.data;
+    const accessToken: string | undefined = payload?.accessToken;
+    const newRefresh: string | undefined = payload?.refreshToken;
+    if (!accessToken) return null;
+
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    if (newRefresh) localStorage.setItem(REFRESH_KEY, newRefresh);
+    return accessToken;
+  } catch {
+    return null;
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+}
 
-// Response interceptor:
-//  - unwraps the API's { success, data } envelope so callers get `res.data`
-//    as the actual payload
-//  - normalizes error messages (the API returns { statusCode, message, ... },
-//    where message may be a string or an array of validation strings)
+function forceLogout() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  // Don't bounce users who are already on a public/auth page.
+  if (!window.location.pathname.startsWith("/auth")) {
+    window.location.href = "/auth?mode=login";
+  }
+}
+
 axiosInstance.interceptors.response.use(
   (response) => {
+    // Unwrap the API's { success, data } envelope.
     const body = response.data;
     if (body && typeof body === "object" && "success" in body && "data" in body) {
       response.data = body.data;
     }
     return response;
   },
-  (error) => {
-    const apiMessage = error?.response?.data?.message;
+  async (error: AxiosError) => {
+    const original = error.config as
+      | (AxiosRequestConfig & { _retried?: boolean })
+      | undefined;
+    const status = error.response?.status;
+    const url = original?.url ?? "";
+    const isAuthRoute = url.includes("/auth/");
+
+    if (status === 401 && original && !original._retried && !isAuthRoute) {
+      original._retried = true;
+      refreshPromise = refreshPromise ?? refreshAccessToken();
+      const newToken = await refreshPromise;
+      refreshPromise = null;
+
+      if (newToken) {
+        original.headers = {
+          ...(original.headers ?? {}),
+          Authorization: `Bearer ${newToken}`,
+        };
+        return axiosInstance(original);
+      }
+      forceLogout();
+    }
+
+    // Normalize error messages: the API returns { statusCode, message, ... }
+    // where message may be a string or an array of validation strings.
+    const apiMessage = (error.response?.data as { message?: unknown })?.message;
     const message = Array.isArray(apiMessage)
       ? apiMessage.join(", ")
-      : apiMessage || error?.message || "Request failed";
+      : (apiMessage as string) || error.message || "Request failed";
     error.message = message;
     return Promise.reject(error);
   },

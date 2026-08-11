@@ -10,6 +10,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { SubmitVerificationDto } from './dto/submit-verification.dto';
 import { ReviewVerificationDto } from './dto/review-verification.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // Minimal shape of a multer-uploaded file (avoids needing @types/multer).
 export interface UploadedFileLike {
@@ -26,6 +27,7 @@ export class VerificationsService {
     private readonly prisma: PrismaService,
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {
     this.bucket = this.config.get<string>('storage.bucket') || 'zenex-uploads';
   }
@@ -64,7 +66,11 @@ export class VerificationsService {
         city: dto.city,
         status: VerificationStatus.SUBMITTED,
         documents: {
-          create: dto.documents.map((d) => ({ type: d.type, url: d.url })),
+          create: dto.documents.map((d) => ({
+            type: d.type,
+            url: d.url,
+            expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+          })),
         },
       },
       include: { documents: true },
@@ -118,7 +124,7 @@ export class VerificationsService {
     });
     if (!request) throw new NotFoundException('Verification request not found');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.verificationRequest.update({
         where: { id },
         data: {
@@ -142,6 +148,24 @@ export class VerificationsService {
 
       return updated;
     });
+
+    // Tell the provider the outcome of their verification.
+    const providerUserId = await this.notifications.userIdForProvider(
+      request.providerId,
+    );
+    if (providerUserId) {
+      const approved = dto.status === VerificationStatus.APPROVED;
+      await this.notifications.notify({
+        userId: providerUserId,
+        type: 'verification',
+        title: approved
+          ? 'Your account is verified ✓'
+          : `Verification ${dto.status.toLowerCase()}`,
+        body: dto.note,
+      });
+    }
+
+    return result;
   }
 
   /** Sign a storage path; pass through anything that's already a URL. */

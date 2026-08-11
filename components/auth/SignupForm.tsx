@@ -3,13 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Camera, Shield, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Shield, Eye, EyeOff, CheckCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { SERVICE_CATS } from "@/lib/data";
 import type { Role } from "./types";
 import { useRegister } from "@/lib/queries/auth";
+import DocumentUploader, {
+  type StagedDoc,
+} from "@/components/verification/DocumentUploader";
+import { useSubmitVerification } from "@/lib/queries/verifications";
 
-const PROVIDER_STEPS = ["Basic Info", "Verify ID", "Services", "Pricing", "Done"];
+const PROVIDER_STEPS = ["Basic Info", "Verification", "Services", "Pricing", "Done"];
+const VERIFY_STEP = 1;
 
 export default function SignupForm({ role }: { role: Role }) {
   const [step, setStep] = useState(0);
@@ -23,7 +28,14 @@ export default function SignupForm({ role }: { role: Role }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
+  // Verification step — optional at signup, completable later in the dashboard.
+  const [docs, setDocs] = useState<StagedDoc[]>([]);
+  const [skippedVerification, setSkippedVerification] = useState(false);
+
   const { mutate: register, isPending, error } = useRegister();
+  const submitVerification = useSubmitVerification();
+
+  const advance = () => setStep((s) => s + 1);
 
   const goNext = () => {
     if (role === "client") {
@@ -34,8 +46,8 @@ export default function SignupForm({ role }: { role: Role }) {
       return;
     }
 
-    // Provider: create the account when leaving the Basic Info step, then
-    // continue through the (visual) onboarding wizard.
+    // Provider: the account is created when leaving Basic Info, so the user is
+    // authenticated for the rest of the wizard (uploads need a token).
     if (step === 0) {
       register(
         { firstName, lastName, email, phone, password, role: "PROVIDER" },
@@ -43,11 +55,29 @@ export default function SignupForm({ role }: { role: Role }) {
       );
       return;
     }
+
+    // Verification step: submit whatever was uploaded, then continue.
+    if (step === VERIFY_STEP && docs.length > 0) {
+      submitVerification.mutate(
+        {
+          documents: docs.map(({ type, url, expiresAt }) => ({ type, url, expiresAt })),
+        },
+        { onSuccess: advance },
+      );
+      return;
+    }
+
     if (step < PROVIDER_STEPS.length - 1) {
-      setStep((s) => s + 1);
+      advance();
     } else {
       router.push("/provider");
     }
+  };
+
+  const skipVerification = () => {
+    setSkippedVerification(true);
+    setDocs([]);
+    advance();
   };
 
   const inputClass =
@@ -101,20 +131,24 @@ export default function SignupForm({ role }: { role: Role }) {
         </>
       )}
 
-      {role === "provider" && step === 1 && (
+      {role === "provider" && step === VERIFY_STEP && (
         <div className="space-y-4 mb-6">
-          <div className="border-2 border-dashed border-teal-200 rounded-2xl p-8 text-center bg-teal-50/30">
-            <Camera className="w-8 h-8 text-teal-400 mx-auto mb-2" />
-            <div className="font-bold text-sm text-slate-700 mb-1">Upload Government ID</div>
-            <p className="text-xs text-slate-500 mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>Driver's license, passport, or provincial ID</p>
-            <button className="bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors">Choose File</button>
+          <div className="rounded-xl p-3.5 bg-teal-50/60 ring-1 ring-teal-100 flex items-start gap-2.5">
+            <Shield className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-teal-800 leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Verified pros get a badge and rank higher in search. You can upload
+              now or finish this later from your dashboard — it won&apos;t block you
+              from setting up your profile.
+            </p>
           </div>
-          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center bg-slate-50/50">
-            <Shield className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-            <div className="font-bold text-sm text-slate-700 mb-1">Insurance Certificate</div>
-            <p className="text-xs text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>General liability insurance required</p>
-          </div>
-          <p className="text-xs text-slate-400 text-center" style={{ fontFamily: "'Inter', sans-serif" }}>All documents are encrypted and reviewed within 24 hours</p>
+
+          <DocumentUploader staged={docs} onChange={setDocs} />
+
+          {submitVerification.isError && (
+            <p className="text-xs text-red-600 font-semibold">
+              {(submitVerification.error as Error).message}
+            </p>
+          )}
         </div>
       )}
 
@@ -147,16 +181,44 @@ export default function SignupForm({ role }: { role: Role }) {
       {role === "provider" && step === 4 && (
         <div className="text-center py-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-teal-200"><CheckCircle className="w-8 h-8 text-white" /></div>
-          <h3 className="font-extrabold text-lg text-slate-900 mb-1">You're all set!</h3>
-          <p className="text-sm text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>Your profile is under review. We'll notify you within 24h.</p>
+          <h3 className="font-extrabold text-lg text-slate-900 mb-1">You&apos;re all set!</h3>
+          <p className="text-sm text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {skippedVerification
+              ? "Your account is ready. Complete verification any time from the Verification tab to earn your badge."
+              : "Your documents are under review — we'll notify you within 24 hours."}
+          </p>
         </div>
       )}
 
       {error && <p className="text-xs text-red-600 font-semibold mb-3">{(error as Error).message}</p>}
 
-      <button onClick={goNext} disabled={isPending} className="w-full bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-colors text-sm shadow-sm shadow-teal-200">
-        {isPending ? "Please wait…" : role === "provider" ? (step === 4 ? "Go to Dashboard" : "Continue") : "Create Account"}
+      <button
+        onClick={goNext}
+        disabled={isPending || submitVerification.isPending}
+        className="w-full bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-colors text-sm shadow-sm shadow-teal-200"
+      >
+        {isPending || submitVerification.isPending
+          ? "Please wait…"
+          : role === "provider"
+            ? step === 4
+              ? "Go to Dashboard"
+              : step === VERIFY_STEP && docs.length > 0
+                ? `Submit ${docs.length} document${docs.length === 1 ? "" : "s"}`
+                : "Continue"
+            : "Create Account"}
       </button>
+
+      {/* Verification is optional at signup so early adopters aren't blocked. */}
+      {role === "provider" && step === VERIFY_STEP && (
+        <button
+          onClick={skipVerification}
+          disabled={submitVerification.isPending}
+          className="w-full mt-2.5 text-slate-500 hover:text-slate-700 font-bold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-60"
+        >
+          Skip for now — I&apos;ll do this later
+        </button>
+      )}
+
       {role !== "provider" && (
         <p className="text-center text-xs text-slate-500 mt-4" style={{ fontFamily: "'Inter', sans-serif" }}>
           Already have an account? <Link href="/auth?mode=login" className="text-teal-600 font-bold">Sign in</Link>

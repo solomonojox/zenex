@@ -1,9 +1,15 @@
 "use client";
 
-import { RefreshCw, Settings, Banknote } from "lucide-react";
+import { RefreshCw, Banknote, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import StatusPill from "@/components/ui/StatusPill";
-import { useWallet, usePayouts, useRequestPayout } from "@/lib/queries/wallet";
+import {
+  useWallet,
+  usePayouts,
+  useRequestPayout,
+  useConnectStatus,
+  useConnectOnboarding,
+} from "@/lib/queries/wallet";
 
 function fmtDate(iso: string) {
   try {
@@ -17,7 +23,19 @@ export default function ProviderWallet() {
   const { data: wallet } = useWallet();
   const { data: payouts = [], isLoading } = usePayouts();
   const payout = useRequestPayout();
+  const { data: connect } = useConnectStatus();
+  const onboarding = useConnectOnboarding();
   const balance = wallet?.balance ?? 0;
+
+  const startOnboarding = () => {
+    const returnUrl =
+      typeof window !== "undefined" ? `${window.location.origin}/wallet` : "";
+    onboarding.mutate(returnUrl, {
+      onSuccess: (res) => {
+        if (res.url) window.location.href = res.url;
+      },
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -33,11 +51,49 @@ export default function ProviderWallet() {
           >
             <RefreshCw className="w-3.5 h-3.5" />{payout.isPending ? "Processing…" : "Request Payout"}
           </button>
-          <button className="flex-1 bg-white text-teal-700 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-teal-50 transition-colors flex items-center justify-center gap-2"><Settings className="w-3.5 h-3.5" />Payout Settings</button>
         </div>
         {payout.isError && <p className="text-xs text-rose-100 mt-3">{(payout.error as Error).message}</p>}
         {payout.isSuccess && <p className="text-xs text-teal-100 mt-3">Payout requested ✓</p>}
       </div>
+
+      {/* Stripe Connect — required before real payouts can be sent. */}
+      <Card className="p-5">
+        <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-teal-600" />Payout account</h3>
+        {connect?.mode === "demo" ? (
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 ring-1 ring-amber-200">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-sm text-amber-800">Demo mode</div>
+              <p className="text-xs text-amber-700 mt-0.5">Payouts are simulated. Add Stripe keys to the API to enable real bank transfers.</p>
+            </div>
+          </div>
+        ) : connect?.payoutsEnabled ? (
+          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-50 ring-1 ring-emerald-200">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="flex-1">
+              <div className="font-bold text-sm text-emerald-800">Connected</div>
+              <p className="text-xs text-emerald-700">Your Stripe account is verified and can receive payouts.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              {connect?.connected
+                ? "Your payout setup is incomplete — finish verification to receive money."
+                : "Connect a payout account to receive your earnings."}
+            </p>
+            {!!connect?.requirements?.length && (
+              <ul className="text-xs text-slate-500 list-disc pl-5 space-y-0.5">
+                {connect.requirements.slice(0, 5).map((r) => <li key={r}>{r.replace(/_/g, " ")}</li>)}
+              </ul>
+            )}
+            <button onClick={startOnboarding} disabled={onboarding.isPending} className="bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors">
+              {onboarding.isPending ? "Opening Stripe…" : connect?.connected ? "Finish verification" : "Connect payout account"}
+            </button>
+            {onboarding.isError && <p className="text-xs text-red-600">{(onboarding.error as Error).message}</p>}
+          </div>
+        )}
+      </Card>
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4"><h3 className="font-bold text-slate-900">Payout History</h3><button className="text-xs font-bold text-teal-600">T4 Slip ›</button></div>
