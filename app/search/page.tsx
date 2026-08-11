@@ -13,13 +13,18 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
 
-  const [filters, setFilters] = useState<SearchFilterState>({ sort: "Top Rated", tags: [], layout: "grid", minRating: 0 });
+  const [filters, setFilters] = useState<SearchFilterState>({ sort: "Top Rated", tags: [], layout: "grid", minRating: 0, location: "" });
 
   // Map UI sort to the API's sort/filter params.
   const sort = filters.sort === "Lowest Price" ? "price" : "rating";
   const instant = filters.sort === "Instant Book" ? "true" : undefined;
 
-  const { data, isLoading, isError } = useProviders({ sort, instant, limit: 50 });
+  const { data, isLoading, isError } = useProviders({
+    sort,
+    instant,
+    location: filters.location || undefined,
+    limit: 50,
+  });
 
   // Client-side refinements (rating + tag chips) on top of the API results.
   // Tags are matched leniently (case/punctuation-insensitive) since the UI

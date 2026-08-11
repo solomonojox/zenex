@@ -40,9 +40,27 @@ export default function VerifyTab() {
                 <div className="font-bold text-slate-900">{name}</div>
                 <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" />{v.city || "—"} · Submitted {fmtDate(v.submittedAt)}</div>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {v.documents.map((d) => (
-                    <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full font-semibold transition-colors"><FileText className="w-3 h-3" />{d.type}</a>
-                  ))}
+                  {v.documents.map((d) => {
+                    const expired = d.expiresAt && new Date(d.expiresAt) < new Date();
+                    return (
+                      <a
+                        key={d.id}
+                        href={d.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={d.expiresAt ? `Expires ${new Date(d.expiresAt).toLocaleDateString()}` : undefined}
+                        className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${expired ? "bg-rose-50 text-rose-700 hover:bg-rose-100" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+                      >
+                        <FileText className="w-3 h-3" />
+                        {d.type}
+                        {d.expiresAt && (
+                          <span className="opacity-70">
+                            · {expired ? "expired" : new Date(d.expiresAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">

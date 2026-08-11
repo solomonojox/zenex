@@ -9,7 +9,20 @@ export function useLogin() {
   const { login } = useAuth();
   return useMutation({
     mutationFn: (dto: LoginInput) => authApi.login(dto),
-    onSuccess: (tokens) => login(tokens.accessToken),
+    onSuccess: (tokens) => login(tokens.accessToken, tokens.refreshToken),
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email: string) => authApi.forgotPassword(email),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({ token, password }: { token: string; password: string }) =>
+      authApi.resetPassword(token, password),
   });
 }
 
@@ -18,6 +31,6 @@ export function useRegister() {
   const { login } = useAuth();
   return useMutation({
     mutationFn: (dto: RegisterInput) => authApi.register(dto),
-    onSuccess: (tokens) => login(tokens.accessToken),
+    onSuccess: (tokens) => login(tokens.accessToken, tokens.refreshToken),
   });
 }

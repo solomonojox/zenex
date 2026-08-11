@@ -27,6 +27,26 @@ export default () => ({
     ),
   },
 
+  booking: {
+    // Cancellations made at least this many hours ahead are refunded in full.
+    freeCancelHours: parseInt(process.env.FREE_CANCEL_HOURS || '24', 10),
+    // Percentage refunded for late cancellations (0–100).
+    lateCancelRefundPercent: parseInt(
+      process.env.LATE_CANCEL_REFUND_PERCENT || '50',
+      10,
+    ),
+  },
+
+  // APP_URL is the public address of the frontend — used for email links and
+  // Stripe redirects. Must be set in production.
+  appUrl: process.env.APP_URL || 'http://localhost:3000',
+
+  mail: {
+    apiKey: process.env.RESEND_API_KEY || '',
+    from: process.env.MAIL_FROM || 'Zenex <onboarding@resend.dev>',
+    appUrl: process.env.APP_URL || 'http://localhost:3000',
+  },
+
   supabase: {
     url: process.env.SUPABASE_URL || '',
     publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || '',

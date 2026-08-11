@@ -13,6 +13,9 @@ import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { AvailabilityService } from '../availability/availability.service';
 import { calculateTax } from '../../common/tax/canadian-tax';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
+import { PaymentsService } from '../payments/payments.service';
+import { ConfigService } from '@nestjs/config';
 
 // Relations returned with a booking so the frontend has everything it needs.
 const bookingInclude = {
@@ -33,6 +36,9 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly availability: AvailabilityService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
+    private readonly payments: PaymentsService,
+    private readonly config: ConfigService,
   ) {}
 
   private genReference(): string {
@@ -136,6 +142,39 @@ export class BookingsService {
     // Tell both sides. Failures here never affect the booking itself.
     const when = created.scheduledFor.toISOString().slice(0, 16).replace('T', ' ');
     const providerUserId = await this.notifications.userIdForProvider(provider.id);
+
+    // Confirmation emails (logged instead of sent when RESEND_API_KEY is unset).
+    const serviceName = created.service?.name ?? 'Cleaning';
+    const clientName = created.client?.user?.firstName ?? 'there';
+    const providerName = created.provider?.user
+      ? `${created.provider.user.firstName} ${created.provider.user.lastName}`.trim()
+      : provider.title;
+    const providerUser = providerUserId
+      ? await this.prisma.user.findUnique({ where: { id: providerUserId } })
+      : null;
+
+    if (user.email) {
+      await this.mail.bookingConfirmed({
+        to: user.email,
+        clientName,
+        providerName,
+        serviceName,
+        reference: created.reference,
+        scheduledFor: created.scheduledFor,
+        total: created.totalPrice,
+      });
+    }
+    if (providerUser?.email) {
+      await this.mail.newBookingForProvider({
+        to: providerUser.email,
+        providerName: providerUser.firstName,
+        clientName,
+        serviceName,
+        reference: created.reference,
+        scheduledFor: created.scheduledFor,
+      });
+    }
+
     await this.notifications.notifyMany([
       {
         userId: user.id,
@@ -251,11 +290,24 @@ export class BookingsService {
       );
     }
 
+    // Cancellation policy: full refund outside the free window, partial inside.
+    const freeHours = this.config.get<number>('booking.freeCancelHours', 24);
+    const latePercent = this.config.get<number>(
+      'booking.lateCancelRefundPercent',
+      50,
+    );
+    const hoursUntil =
+      (booking.scheduledFor.getTime() - Date.now()) / (60 * 60 * 1000);
+    const refundPercent = hoursUntil >= freeHours ? 100 : latePercent;
+
     const updated = await this.prisma.booking.update({
       where: { id },
       data: { status: BookingStatus.CANCELLED },
       include: bookingInclude,
     });
+
+    // Refund whatever the policy allows (no-ops if the booking was never paid).
+    const refund = await this.payments.refundBooking(id, refundPercent);
 
     // Notify the other party (whoever didn't cancel).
     await this.notifyBothParties(updated, {
@@ -265,7 +317,31 @@ export class BookingsService {
       exceptUserId: user.id,
     });
 
-    return updated;
+    // Email both sides so nobody turns up to a cancelled job. Emails are
+    // fetched here rather than included in the API response, to avoid
+    // exposing one party's address to the other.
+    const svcName = updated.service?.name ?? 'Cleaning';
+    const [clientUserId, providerUserId] = await Promise.all([
+      this.notifications.userIdForClient(updated.clientId),
+      this.notifications.userIdForProvider(updated.providerId),
+    ]);
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        id: { in: [clientUserId, providerUserId].filter((id): id is string => !!id) },
+      },
+      select: { email: true, firstName: true },
+    });
+    for (const r of recipients) {
+      await this.mail.bookingCancelled({
+        to: r.email,
+        name: r.firstName,
+        reference: updated.reference,
+        serviceName: svcName,
+      });
+    }
+
+    // Surface the refund outcome so the UI can confirm it to the client.
+    return { ...updated, refund };
   }
 
   /** Send a notification to the booking's client and provider. */

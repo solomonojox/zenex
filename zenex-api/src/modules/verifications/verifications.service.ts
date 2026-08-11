@@ -66,7 +66,11 @@ export class VerificationsService {
         city: dto.city,
         status: VerificationStatus.SUBMITTED,
         documents: {
-          create: dto.documents.map((d) => ({ type: d.type, url: d.url })),
+          create: dto.documents.map((d) => ({
+            type: d.type,
+            url: d.url,
+            expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+          })),
         },
       },
       include: { documents: true },

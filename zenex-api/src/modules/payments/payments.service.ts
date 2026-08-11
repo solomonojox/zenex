@@ -16,6 +16,7 @@ import Stripe from 'stripe';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { StripeService } from './stripe.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PaymentsService {
@@ -24,6 +25,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private ref(prefix: string) {
@@ -130,8 +132,12 @@ export class PaymentsService {
       throw new NotFoundException('Booking parties not found');
     }
 
-    const clientWallet = await this.ensureWallet(clientProfile.userId);
-    const providerWallet = await this.ensureWallet(providerProfile.userId);
+    // Capture up front — narrowing doesn't survive the transaction closure.
+    const clientUserId: string = clientProfile.userId;
+    const providerUserId: string = providerProfile.userId;
+
+    const clientWallet = await this.ensureWallet(clientUserId);
+    const providerWallet = await this.ensureWallet(providerUserId);
 
     return this.prisma.$transaction(async (tx) => {
       // Client is charged (debit) — this is the one transaction tied to the booking.
@@ -176,6 +182,22 @@ export class PaymentsService {
         });
       }
     });
+
+    // Receipt for the client, earnings alert for the provider.
+    await this.notifications.notifyMany([
+      {
+        userId: clientUserId,
+        type: 'payment',
+        title: `Payment received — $${opts.amount.toFixed(2)}`,
+        body: `Booking ${booking.reference}`,
+      },
+      {
+        userId: providerUserId,
+        type: 'payment',
+        title: `You earned $${opts.providerEarning.toFixed(2)}`,
+        body: `Booking ${booking.reference} · paid`,
+      },
+    ]);
   }
 
   /** Stripe webhook — verifies signature and settles on payment_intent.succeeded. */
@@ -222,6 +244,115 @@ export class PaymentsService {
     }
 
     return { received: true };
+  }
+
+  /**
+   * Refund a cancelled booking. `percent` is how much of the charge to return
+   * (100 = full). Reverses the wallet entries and, in live mode, issues a real
+   * Stripe refund. Safe to call on unpaid bookings — it simply no-ops.
+   */
+  async refundBooking(bookingId: string, percent: number) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { transaction: true },
+    });
+    if (!booking?.transaction) return null; // never paid — nothing to refund
+
+    const paid = Math.abs(booking.transaction.amount);
+    const refundAmount = this.money((paid * Math.max(0, Math.min(percent, 100))) / 100);
+    if (refundAmount <= 0) return null;
+
+    const clientProfile = await this.prisma.clientProfile.findUnique({
+      where: { id: booking.clientId },
+    });
+    const providerProfile = await this.prisma.providerProfile.findUnique({
+      where: { id: booking.providerId },
+    });
+    if (!clientProfile || !providerProfile) return null;
+
+    const clientUserId = clientProfile.userId;
+    const providerUserId = providerProfile.userId;
+    const clientWallet = await this.ensureWallet(clientUserId);
+    const providerWallet = await this.ensureWallet(providerUserId);
+
+    // Claw back the provider's share proportionally to what we refund.
+    const taxAmount = this.money(booking.taxAmount ?? 0);
+    const subtotal = this.money(paid - taxAmount);
+    const platformFee = this.money(
+      (subtotal * this.stripe.platformFeePercent) / 100,
+    );
+    const providerEarned = this.money(subtotal - platformFee);
+    const providerClawback = this.money((providerEarned * percent) / 100);
+
+    let stripeRef: string | undefined;
+    if (this.stripe.enabled && booking.transaction.stripeRef) {
+      try {
+        const refund = await this.stripe.client.refunds.create({
+          payment_intent: booking.transaction.stripeRef,
+          amount: Math.round(refundAmount * 100),
+        });
+        stripeRef = refund.id;
+      } catch (e) {
+        this.logger.warn(`Stripe refund failed: ${(e as Error).message}`);
+      }
+    }
+
+    await this.prisma.$transaction([
+      // Credit the client back.
+      this.prisma.transaction.create({
+        data: {
+          reference: this.ref('TXN'),
+          walletId: clientWallet.id,
+          description: `Refund — booking ${booking.reference}`,
+          amount: refundAmount,
+          type: TransactionType.CREDIT,
+          status: TransactionStatus.REFUNDED,
+          stripeRef,
+        },
+      }),
+      this.prisma.wallet.update({
+        where: { id: clientWallet.id },
+        data: { balance: { increment: refundAmount } },
+      }),
+      // Reverse the provider's earning.
+      this.prisma.transaction.create({
+        data: {
+          reference: this.ref('TXN'),
+          walletId: providerWallet.id,
+          description: `Reversal — booking ${booking.reference} cancelled`,
+          amount: -providerClawback,
+          type: TransactionType.DEBIT,
+          status: TransactionStatus.REFUNDED,
+          stripeRef,
+        },
+      }),
+      this.prisma.wallet.update({
+        where: { id: providerWallet.id },
+        data: { balance: { decrement: providerClawback } },
+      }),
+      // Mark the original charge as refunded.
+      this.prisma.transaction.update({
+        where: { id: booking.transaction.id },
+        data: { status: TransactionStatus.REFUNDED },
+      }),
+    ]);
+
+    await this.notifications.notifyMany([
+      {
+        userId: clientUserId,
+        type: 'payment',
+        title: `Refund issued — $${refundAmount.toFixed(2)}`,
+        body: `Booking ${booking.reference}${percent < 100 ? ` (${percent}% per cancellation policy)` : ''}`,
+      },
+      {
+        userId: providerUserId,
+        type: 'payment',
+        title: `Booking ${booking.reference} cancelled`,
+        body: `$${providerClawback.toFixed(2)} reversed from your balance`,
+      },
+    ]);
+
+    return { refundAmount, providerClawback, percent, stripeRef };
   }
 
   // ─────────────── Stripe Connect (provider payouts) ───────────────

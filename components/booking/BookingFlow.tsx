@@ -52,6 +52,8 @@ function BookingFlowInner({ provider }: { provider: Provider }) {
   const [slot, setSlot] = useState<string | null>(null);
   const [extras, setExtras] = useState<string[]>([]);
   const [recurring, setRecurring] = useState(false);
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +100,10 @@ function BookingFlowInner({ provider }: { provider: Provider }) {
       setStep(1);
       return;
     }
+    if (address.trim().length < 6) {
+      setError("Please enter the service address so your pro can find you.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -107,6 +113,8 @@ function BookingFlowInner({ provider }: { provider: Provider }) {
         scheduledFor: slot,
         durationMins,
         timeSlot: formatBookingTime(slot),
+        address: address.trim(),
+        notes: notes.trim() || undefined,
         extras: extrasPayload,
       });
       setBookingRef(booking.reference);
@@ -155,7 +163,15 @@ function BookingFlowInner({ provider }: { provider: Provider }) {
       )}
       {step === 2 && <ExtrasStep extras={extras} onToggle={toggleExtra} />}
       {step === 3 && (
-        <PaymentStep service={service} extras={extras} quote={quote}>
+        <PaymentStep
+          service={service}
+          extras={extras}
+          quote={quote}
+          address={address}
+          onAddress={setAddress}
+          notes={notes}
+          onNotes={setNotes}
+        >
           {clientSecret && (
             <StripeCardForm
               clientSecret={clientSecret}

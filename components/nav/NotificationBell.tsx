@@ -1,41 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Bell,
-  Calendar,
-  CreditCard,
-  MessageSquare,
-  Star,
-  ShieldCheck,
-  Info,
-} from "lucide-react";
-import type { NotificationType } from "@/lib/api/notifications";
+import { Bell } from "lucide-react";
 import {
   useNotifications,
   useUnreadCount,
   useMarkRead,
   useMarkAllRead,
 } from "@/lib/queries/notifications";
-
-const ICONS: Record<NotificationType, { I: typeof Bell; c: string }> = {
-  booking: { I: Calendar, c: "text-teal-500" },
-  payment: { I: CreditCard, c: "text-emerald-500" },
-  message: { I: MessageSquare, c: "text-blue-500" },
-  review: { I: Star, c: "text-amber-500" },
-  verification: { I: ShieldCheck, c: "text-violet-500" },
-  info: { I: Info, c: "text-slate-400" },
-};
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
+import { notificationIcon, timeAgo } from "@/lib/utils/notifications";
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -100,7 +73,7 @@ export default function NotificationBell() {
               </p>
             ) : (
               items.map((n) => {
-                const { I, c } = ICONS[n.type] ?? ICONS.info;
+                const { I, c } = notificationIcon(n.type);
                 return (
                   <button
                     key={n.id}

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -10,6 +11,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Role } from '../../common/enums/role.enum';
+import { MailService } from '../mail/mail.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +20,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
   /** Resolve a tenant by its slug (subdomain), falling back to the default. */
@@ -100,15 +104,29 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // Confirm the token exists and is not revoked.
-    const stored = await this.prisma.refreshToken.findFirst({
-      where: { userId: payload.sub, revokedAt: null },
+    // Check every live token for this user, not just the newest — otherwise
+    // signing in on a second device would break refresh on the first.
+    const candidates = await this.prisma.refreshToken.findMany({
+      where: {
+        userId: payload.sub,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
       orderBy: { createdAt: 'desc' },
     });
-    if (!stored || !(await argon2.verify(stored.tokenHash, refreshToken))) {
+
+    let stored: (typeof candidates)[number] | null = null;
+    for (const c of candidates) {
+      if (await argon2.verify(c.tokenHash, refreshToken)) {
+        stored = c;
+        break;
+      }
+    }
+    if (!stored) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    // Rotate: this token is spent once used.
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
@@ -120,6 +138,84 @@ export class AuthService {
       payload.role,
       payload.tenantId,
     );
+  }
+
+  /**
+   * Emails a reset link. Always returns the same response whether or not the
+   * address exists, so the endpoint can't be used to enumerate accounts.
+   */
+  async forgotPassword(email: string, tenantSlug: string) {
+    const tenantId = await this.resolveTenantId(tenantSlug);
+    const user = await this.prisma.user.findUnique({
+      where: { tenantId_email: { tenantId, email } },
+    });
+
+    if (user) {
+      // Raw secret goes in the email; only its hash is stored. The row id is
+      // prefixed onto the emailed token so verification is a direct lookup
+      // rather than a scan over every pending reset.
+      const secret = crypto.randomBytes(32).toString('hex');
+      const row = await this.prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: await argon2.hash(secret),
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        },
+      });
+      await this.mail.passwordReset({
+        to: user.email,
+        name: user.firstName,
+        token: `${row.id}.${secret}`,
+      });
+    }
+
+    return {
+      ok: true,
+      message: 'If that email is registered, a reset link is on its way.',
+    };
+  }
+
+  /** Consume a reset token, set the new password, and revoke all sessions. */
+  async resetPassword(token: string, password: string) {
+    // Token format is "<rowId>.<secret>" — look the row up directly.
+    const sep = token.indexOf('.');
+    const rowId = sep > 0 ? token.slice(0, sep) : '';
+    const secret = sep > 0 ? token.slice(sep + 1) : '';
+    const invalid = new BadRequestException(
+      'This reset link is invalid or has expired.',
+    );
+    if (!rowId || !secret) throw invalid;
+
+    const matched = await this.prisma.passwordResetToken.findUnique({
+      where: { id: rowId },
+    });
+    if (
+      !matched ||
+      matched.usedAt ||
+      matched.expiresAt <= new Date() ||
+      !(await argon2.verify(matched.tokenHash, secret))
+    ) {
+      throw invalid;
+    }
+
+    const passwordHash = await argon2.hash(password);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: matched.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: matched.id },
+        data: { usedAt: new Date() },
+      }),
+      // Force re-login everywhere after a password change.
+      this.prisma.refreshToken.updateMany({
+        where: { userId: matched.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return { ok: true, message: 'Password updated — you can sign in now.' };
   }
 
   async logout(userId: string) {

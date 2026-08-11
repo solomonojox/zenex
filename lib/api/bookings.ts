@@ -77,8 +77,13 @@ export const bookingsApi = {
   get: async (id: string): Promise<ApiBooking> =>
     (await axios.get(`/bookings/${id}`)).data,
 
-  cancel: async (id: string): Promise<ApiBooking> =>
-    (await axios.patch(`/bookings/${id}/cancel`)).data,
+  cancel: async (
+    id: string,
+  ): Promise<
+    ApiBooking & {
+      refund?: { refundAmount: number; percent: number } | null;
+    }
+  > => (await axios.patch(`/bookings/${id}/cancel`)).data,
 
   updateStatus: async (id: string, status: string): Promise<ApiBooking> =>
     (await axios.patch(`/bookings/${id}/status`, { status })).data,

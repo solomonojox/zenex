@@ -128,6 +128,20 @@ Real-time: Socket.IO namespace **`/messages`** — connect with the JWT access
 token in the handshake (`io('/messages', { auth: { token } })`), emit
 `thread:join` `{ threadId }`, and listen for `message:new`.
 
+## Notifications & email
+
+In-app notifications are emitted on booking created, status change,
+cancellation, payment, new message, new review, and verification outcome
+(`NotificationsService` is global — inject it anywhere). They surface via the
+nav bell and the client dashboard.
+
+Transactional email uses **Resend** over its HTTP API (no SDK). Set
+`RESEND_API_KEY` to send for real; leave it blank and emails are **logged to the
+console** instead, so the whole flow works in development.
+
+A cron job (`RemindersService`, hourly) emails and notifies both parties
+~24h before a booking, marking `reminderSentAt` so it only fires once.
+
 ## Sales tax (GST/HST)
 
 Bookings are priced **subtotal + Canadian sales tax**, resolved from the

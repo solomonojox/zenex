@@ -10,8 +10,9 @@ import OverviewTab from "@/components/provider/OverviewTab";
 import JobsTab from "@/components/provider/JobsTab";
 import ProfileTab from "@/components/provider/ProfileTab";
 import AvailabilityTab from "@/components/provider/AvailabilityTab";
+import VerificationTab from "@/components/provider/VerificationTab";
 
-type TabKey = "overview" | "jobs" | "availability" | "profile";
+type TabKey = "overview" | "jobs" | "availability" | "verification" | "profile";
 
 export default function ProviderDashboardPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function ProviderDashboardPage() {
         </div>
 
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit mb-6">
-          {(["overview", "jobs", "availability", "profile"] as const).map((t) => (
+          {(["overview", "jobs", "availability", "verification", "profile"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`px-5 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${tab === t ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
               {t}
             </button>
@@ -65,6 +66,7 @@ export default function ProviderDashboardPage() {
         {tab === "overview" && <OverviewTab />}
         {tab === "jobs" && <JobsTab />}
         {tab === "availability" && <AvailabilityTab />}
+        {tab === "verification" && <VerificationTab />}
         {tab === "profile" && <ProfileTab />}
       </div>
       <div className="h-24" />

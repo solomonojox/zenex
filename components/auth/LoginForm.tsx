@@ -61,7 +61,7 @@ export default function LoginForm() {
           </div>
         </div>
         {error && <p className="text-xs text-red-600 font-semibold">{(error as Error).message}</p>}
-        <div className="text-right"><a href="#" className="text-xs text-teal-600 font-bold hover:text-teal-700">Forgot password?</a></div>
+        <div className="text-right"><Link href="/auth?mode=forgot" className="text-xs text-teal-600 font-bold hover:text-teal-700">Forgot password?</Link></div>
       </div>
       <button onClick={submit} disabled={isPending} className="w-full bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm text-sm mb-4">{isPending ? "Signing in…" : "Sign In"}</button>
       <p className="text-center text-xs text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>

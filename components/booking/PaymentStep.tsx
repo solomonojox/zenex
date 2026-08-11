@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, MapPin } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { EXTRAS_LIST } from "@/lib/data";
 import type { Service } from "@/lib/types";
@@ -10,11 +10,19 @@ export default function PaymentStep({
   service,
   extras,
   quote,
+  address,
+  onAddress,
+  notes,
+  onNotes,
   children,
 }: {
   service: Service;
   extras: string[];
   quote?: Quote;
+  address: string;
+  onAddress: (v: string) => void;
+  notes: string;
+  onNotes: (v: string) => void;
   /** Card entry (Stripe Elements) is injected here in live mode. */
   children?: React.ReactNode;
 }) {
@@ -23,6 +31,31 @@ export default function PaymentStep({
 
   return (
     <div className="space-y-4">
+      {/* The pro needs to know where to go — required before confirming. */}
+      <Card className="p-5">
+        <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-teal-600" />Service address
+        </h3>
+        <input
+          value={address}
+          onChange={(e) => onAddress(e.target.value)}
+          placeholder="42 Elm St, Unit 3, Toronto, ON M5V 2K4"
+          className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all text-slate-800"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        />
+        <label className="text-xs font-bold text-slate-700 mt-3 mb-1.5 block">
+          Access notes <span className="font-normal text-slate-400">(optional)</span>
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => onNotes(e.target.value)}
+          rows={2}
+          placeholder="Buzzer code, parking, pets, where to find keys…"
+          className="w-full bg-slate-50 ring-1 ring-slate-200 focus:ring-teal-400 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all text-slate-800"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        />
+      </Card>
+
       {children}
 
       <Card className="p-5">
