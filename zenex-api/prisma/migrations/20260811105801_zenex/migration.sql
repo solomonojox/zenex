@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "bookings" ADD COLUMN     "province" TEXT,
+ADD COLUMN     "taxAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "taxLabel" TEXT,
+ADD COLUMN     "taxRate" DOUBLE PRECISION NOT NULL DEFAULT 0;

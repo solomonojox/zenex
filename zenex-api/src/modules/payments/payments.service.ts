@@ -61,9 +61,16 @@ export class PaymentsService {
       throw new BadRequestException('Booking already paid');
     }
 
+    // The client is charged the full total (incl. tax), but the platform fee
+    // and the provider's earning are calculated on the pre-tax subtotal —
+    // sales tax is held for remittance, not shared.
     const amount = this.money(booking.totalPrice);
-    const platformFee = this.money((amount * this.stripe.platformFeePercent) / 100);
-    const providerEarning = this.money(amount - platformFee);
+    const taxAmount = this.money(booking.taxAmount ?? 0);
+    const subtotal = this.money(amount - taxAmount);
+    const platformFee = this.money(
+      (subtotal * this.stripe.platformFeePercent) / 100,
+    );
+    const providerEarning = this.money(subtotal - platformFee);
 
     if (this.stripe.enabled) {
       const wallet = await this.ensureWallet(user.id);
@@ -82,6 +89,8 @@ export class PaymentsService {
         mode: 'live' as const,
         clientSecret: intent.client_secret,
         amount,
+        subtotal,
+        taxAmount,
         platformFee,
         providerEarning,
       };
@@ -93,6 +102,8 @@ export class PaymentsService {
       mode: 'demo' as const,
       paid: true,
       amount,
+      subtotal,
+      taxAmount,
       platformFee,
       providerEarning,
       bookingId: booking.id,
@@ -194,10 +205,12 @@ export class PaymentsService {
         });
         if (booking && !booking.transaction) {
           const amount = this.money(intent.amount / 100);
+          const taxAmount = this.money(booking.taxAmount ?? 0);
+          const subtotal = this.money(amount - taxAmount);
           const platformFee = this.money(
-            (amount * this.stripe.platformFeePercent) / 100,
+            (subtotal * this.stripe.platformFeePercent) / 100,
           );
-          const providerEarning = this.money(amount - platformFee);
+          const providerEarning = this.money(subtotal - platformFee);
           await this.settle(booking, {
             amount,
             platformFee,
@@ -209,6 +222,93 @@ export class PaymentsService {
     }
 
     return { received: true };
+  }
+
+  // ─────────────── Stripe Connect (provider payouts) ───────────────
+
+  /**
+   * Start or resume Express onboarding. Returns a hosted Stripe URL the
+   * provider completes; in demo mode returns a stub so the UI still works.
+   */
+  async connectOnboarding(user: AuthUser, returnUrl: string) {
+    const provider = await this.prisma.providerProfile.findUnique({
+      where: { userId: user.id },
+    });
+    if (!provider) {
+      throw new ForbiddenException('Only providers can connect payouts');
+    }
+
+    const wallet = await this.ensureWallet(user.id);
+
+    if (!this.stripe.enabled) {
+      return {
+        mode: 'demo' as const,
+        url: null,
+        message:
+          'Stripe is not configured — payouts run in demo mode. Add STRIPE_SECRET_KEY to enable real onboarding.',
+      };
+    }
+
+    let accountId = wallet.stripeConnectAccountId;
+    if (!accountId) {
+      const account = await this.stripe.client.accounts.create({
+        type: 'express',
+        country: 'CA',
+        email: user.email,
+        capabilities: {
+          transfers: { requested: true },
+          card_payments: { requested: true },
+        },
+        business_type: 'individual',
+        metadata: { providerId: provider.id, userId: user.id },
+      });
+      accountId = account.id;
+      await this.prisma.wallet.update({
+        where: { id: wallet.id },
+        data: { stripeConnectAccountId: accountId },
+      });
+    }
+
+    const link = await this.stripe.client.accountLinks.create({
+      account: accountId,
+      refresh_url: returnUrl,
+      return_url: returnUrl,
+      type: 'account_onboarding',
+    });
+
+    return { mode: 'live' as const, url: link.url, accountId };
+  }
+
+  /** Whether this provider can actually receive payouts yet. */
+  async connectStatus(user: AuthUser) {
+    const wallet = await this.ensureWallet(user.id);
+    const accountId = wallet.stripeConnectAccountId;
+
+    if (!this.stripe.enabled) {
+      return {
+        mode: 'demo' as const,
+        connected: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+      };
+    }
+    if (!accountId) {
+      return {
+        mode: 'live' as const,
+        connected: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+      };
+    }
+
+    const account = await this.stripe.client.accounts.retrieve(accountId);
+    return {
+      mode: 'live' as const,
+      connected: true,
+      payoutsEnabled: account.payouts_enabled,
+      detailsSubmitted: account.details_submitted,
+      requirements: account.requirements?.currently_due ?? [],
+    };
   }
 
   /** Provider withdraws their available balance. Live → Stripe transfer; demo → simulated. */
@@ -231,6 +331,11 @@ export class PaymentsService {
     });
 
     let stripeRef: string | undefined;
+    if (this.stripe.enabled && !wallet.stripeConnectAccountId) {
+      throw new BadRequestException(
+        'Connect your payout account before requesting a payout.',
+      );
+    }
     if (this.stripe.enabled && wallet.stripeConnectAccountId) {
       const transfer = await this.stripe.client.transfers.create({
         amount: Math.round(amount * 100),

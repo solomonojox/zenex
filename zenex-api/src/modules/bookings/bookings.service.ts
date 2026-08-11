@@ -10,6 +10,8 @@ import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
+import { AvailabilityService } from '../availability/availability.service';
+import { calculateTax } from '../../common/tax/canadian-tax';
 
 // Relations returned with a booking so the frontend has everything it needs.
 const bookingInclude = {
@@ -26,7 +28,10 @@ const bookingInclude = {
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly availability: AvailabilityService,
+  ) {}
 
   private genReference(): string {
     return 'BK-' + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -69,7 +74,32 @@ export class BookingsService {
 
     const extras = dto.extras ?? [];
     const extrasTotal = extras.reduce((sum, e) => sum + e.price, 0);
-    const totalPrice = basePrice + extrasTotal;
+    // Sales tax is based on where the service is performed (provider's province).
+    const tax = calculateTax(basePrice + extrasTotal, provider.location);
+    const totalPrice = tax.total;
+
+    // Reject the booking if the provider is already busy or off at that time.
+    const scheduledFor = new Date(dto.scheduledFor);
+    const durationMins =
+      dto.durationMins ?? (dto.hours ? dto.hours * 60 : undefined) ?? 120;
+
+    if (Number.isNaN(scheduledFor.getTime())) {
+      throw new BadRequestException('Invalid scheduledFor date');
+    }
+    if (scheduledFor <= new Date()) {
+      throw new BadRequestException('Bookings must be scheduled in the future');
+    }
+
+    const conflict = await this.availability.hasConflict(
+      provider.id,
+      scheduledFor,
+      durationMins,
+    );
+    if (conflict) {
+      throw new BadRequestException(
+        'That time slot is no longer available — please pick another.',
+      );
+    }
 
     return this.prisma.booking.create({
       data: {
@@ -78,7 +108,8 @@ export class BookingsService {
         client: { connect: { id: client.id } },
         provider: { connect: { id: provider.id } },
         ...(serviceId ? { service: { connect: { id: serviceId } } } : {}),
-        scheduledFor: new Date(dto.scheduledFor),
+        scheduledFor,
+        durationMins,
         timeSlot: dto.timeSlot,
         // Instant-book providers auto-confirm; others start pending.
         status: provider.instant
@@ -86,6 +117,10 @@ export class BookingsService {
           : BookingStatus.PENDING,
         basePrice,
         extrasTotal,
+        taxAmount: tax.taxAmount,
+        taxRate: tax.taxRate,
+        taxLabel: tax.taxLabel,
+        province: tax.province,
         totalPrice,
         address: dto.address,
         notes: dto.notes,
@@ -95,6 +130,34 @@ export class BookingsService {
       },
       include: bookingInclude,
     });
+  }
+
+  /** Price preview (subtotal + tax) without creating a booking. */
+  async quote(dto: {
+    providerId: string;
+    serviceId?: string;
+    extras?: { name: string; price: number }[];
+  }) {
+    const provider = await this.prisma.providerProfile.findUnique({
+      where: { id: dto.providerId },
+    });
+    if (!provider) throw new NotFoundException('Provider not found');
+
+    let basePrice = provider.hourlyRate * provider.minBookingHrs;
+    if (dto.serviceId) {
+      const service = await this.prisma.service.findFirst({
+        where: { id: dto.serviceId, providerId: provider.id },
+      });
+      if (!service) {
+        throw new BadRequestException('Service does not belong to this provider');
+      }
+      basePrice = service.price;
+    }
+
+    const extrasTotal = (dto.extras ?? []).reduce((s, e) => s + e.price, 0);
+    const tax = calculateTax(basePrice + extrasTotal, provider.location);
+
+    return { basePrice, extrasTotal, ...tax };
   }
 
   /** Role-aware list: clients see their bookings, providers see theirs, admins see the tenant's. */

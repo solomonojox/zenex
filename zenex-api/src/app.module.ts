@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { AvailabilityModule } from './modules/availability/availability.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { MessagesModule } from './modules/messages/messages.module';
@@ -33,6 +34,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     UsersModule,
     ProvidersModule,
     BookingsModule,
+    AvailabilityModule,
     ReviewsModule,
     FavoritesModule,
     MessagesModule,

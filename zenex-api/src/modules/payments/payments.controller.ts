@@ -1,5 +1,7 @@
 import {
+  Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   Param,
@@ -38,6 +40,27 @@ export class PaymentsController {
   @Post('payouts')
   payout(@CurrentUser() user: AuthUser) {
     return this.payments.payout(user);
+  }
+
+  /** Begin/resume Stripe Connect Express onboarding. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PROVIDER)
+  @Post('connect/onboarding')
+  connectOnboarding(
+    @CurrentUser() user: AuthUser,
+    @Body('returnUrl') returnUrl?: string,
+  ) {
+    return this.payments.connectOnboarding(
+      user,
+      returnUrl || 'http://localhost:3000/provider',
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PROVIDER)
+  @Get('connect/status')
+  connectStatus(@CurrentUser() user: AuthUser) {
+    return this.payments.connectStatus(user);
   }
 
   // Stripe webhook — public, needs the raw request body for signature checks.

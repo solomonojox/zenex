@@ -128,6 +128,18 @@ Real-time: Socket.IO namespace **`/messages`** — connect with the JWT access
 token in the handshake (`io('/messages', { auth: { token } })`), emit
 `thread:join` `{ threadId }`, and listen for `message:new`.
 
+## Sales tax (GST/HST)
+
+Bookings are priced **subtotal + Canadian sales tax**, resolved from the
+provider's province (`src/common/tax/canadian-tax.ts`): HST for ON/NS/NB/NL/PE,
+GST elsewhere, GST+QST for QC. `POST /api/bookings/quote` returns a full
+breakdown before booking. The platform fee and the provider's earning are
+calculated on the **pre-tax subtotal** — tax is held for remittance, not split.
+
+> ⚠ Rates are standard published defaults, not tax advice. Verify with an
+> accountant; GST/HST registration is generally required past $30k revenue
+> over four consecutive quarters.
+
 ## Payments (demo vs live)
 
 Payments run in **DEMO mode** until real Stripe keys are set — a booking checkout
@@ -135,10 +147,28 @@ settles instantly, debiting the client's wallet and crediting the provider's
 earning (net of the `STRIPE_PLATFORM_FEE_PERCENT` fee), and payouts are
 simulated. Everything is persisted as real `Transaction`/`Payout` rows.
 
-To go **LIVE**, set `STRIPE_SECRET_KEY` (and `STRIPE_WEBHOOK_SECRET`) in `.env`.
-The same endpoints then create real Stripe PaymentIntents and Connect transfers,
-with settlement finalized by the `/api/payments/webhook` handler — no code
-changes needed. `StripeService.enabled` decides which path runs.
+To go **LIVE**, set `STRIPE_SECRET_KEY` (and `STRIPE_WEBHOOK_SECRET`) in `.env`,
+plus `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in the frontend's `.env.local`.
+The same endpoints then create real Stripe PaymentIntents (collected via Stripe
+Elements in the booking flow) and Connect transfers, with settlement finalized
+by the `/api/payments/webhook` handler. `StripeService.enabled` decides which
+path runs — no code changes needed.
+
+**Provider payouts** use Stripe Connect Express:
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| POST | `/api/payments/connect/onboarding` | Get a hosted Stripe onboarding URL |
+| GET  | `/api/payments/connect/status` | Whether payouts are enabled yet |
+
+Providers connect their account from **Wallet → Payout account**. In live mode a
+payout is rejected until Connect onboarding is complete.
+
+Local webhook testing:
+
+```bash
+stripe listen --forward-to localhost:4000/api/payments/webhook
+```
 
 ## Status
 
