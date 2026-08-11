@@ -3,8 +3,12 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { initSentry } from './common/observability/sentry';
 
 async function bootstrap() {
+  // Must run before the app is created so early errors are captured.
+  initSentry();
+
   // rawBody: true keeps the raw request buffer so the Stripe webhook can
   // verify signatures (needed only in live mode).
   const app = await NestFactory.create(AppModule, { rawBody: true });

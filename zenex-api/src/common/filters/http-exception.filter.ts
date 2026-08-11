@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Sentry } from '../observability/sentry';
 
 /**
  * Serializes every error into a consistent JSON envelope so the
@@ -37,6 +38,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `${request.method} ${request.url}`,
         (exception as Error)?.stack,
       );
+      // Only server faults go to Sentry — 4xx are expected client errors.
+      Sentry.captureException(exception, {
+        tags: { path: request.url, method: request.method },
+      });
     }
 
     response.status(status).json({

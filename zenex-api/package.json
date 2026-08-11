@@ -28,6 +28,17 @@
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",
@@ -41,6 +52,7 @@
     "@nestjs/throttler": "^5.1.0",
     "@nestjs/websockets": "^10.3.0",
     "@prisma/client": "^5.10.0",
+    "@sentry/node": "^7.112.0",
     "@supabase/supabase-js": "^2.45.0",
     "argon2": "^0.31.2",
     "class-transformer": "^0.5.1",
