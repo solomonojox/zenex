@@ -19,9 +19,14 @@ import { PrismaService } from '../../prisma/prisma.service';
  * Rooms: one per thread ("thread:<id>"); the REST send endpoint pushes
  *   new messages to the room via emitNewMessage().
  */
+// Socket CORS mirrors the REST allow-list rather than reflecting any origin.
+const SOCKET_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim());
+
 @WebSocketGateway({
   namespace: '/messages',
-  cors: { origin: true, credentials: true },
+  cors: { origin: SOCKET_ORIGINS, credentials: true },
 })
 export class MessagesGateway implements OnGatewayConnection {
   private readonly logger = new Logger(MessagesGateway.name);

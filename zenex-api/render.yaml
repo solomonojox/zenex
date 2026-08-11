@@ -1,0 +1,57 @@
+# Render blueprint for the Zenex API.
+# Create the service from this file, then fill in the secret env vars in the
+# Render dashboard (they're marked sync:false so they're never committed).
+services:
+  - type: web
+    name: zenex-api
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: zenex-api
+    buildCommand: npm ci && npm run build
+    # Runs pending migrations before booting, so deploys stay in sync with the DB.
+    startCommand: npm run start:render
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PREFIX
+        value: api
+      # ── Set these in the Render dashboard ──
+      - key: DATABASE_URL # Supabase pooled connection (port 6543)
+        sync: false
+      - key: DIRECT_URL # Supabase direct connection (port 5432)
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGINS # e.g. https://zenex.vercel.app
+        sync: false
+      - key: APP_URL # public frontend URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        value: zenex-uploads
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        value: "15"
+      - key: FREE_CANCEL_HOURS
+        value: "24"
+      - key: LATE_CANCEL_REFUND_PERCENT
+        value: "50"
