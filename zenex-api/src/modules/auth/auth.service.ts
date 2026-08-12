@@ -65,7 +65,21 @@ export class AuthService {
         ...(dto.role === Role.PROVIDER
           ? {
               providerProfile: {
-                create: { tenantId, title: 'New Provider', location: '' },
+                create: {
+                  tenantId,
+                  title: 'New Provider',
+                  location: '',
+                  // Seed a sensible Mon–Fri 9–5 week so a new provider is
+                  // bookable as soon as they list a service. Without this
+                  // every date shows "no openings" with no explanation.
+                  availability: {
+                    create: [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+                      dayOfWeek,
+                      startMinute: 9 * 60,
+                      endMinute: 17 * 60,
+                    })),
+                  },
+                },
               },
             }
           : {}),

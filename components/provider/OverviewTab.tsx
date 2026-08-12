@@ -9,6 +9,8 @@ import Card from "@/components/ui/Card";
 import { useMyBookings } from "@/lib/queries/bookings";
 import { useWallet, useTransactions } from "@/lib/queries/wallet";
 import { useMyVerification } from "@/lib/queries/verifications";
+import { useMyServices } from "@/lib/queries/providers";
+import { useMySchedule } from "@/lib/queries/availability";
 
 const PIE_COLORS = ["#0D9488", "#10B981", "#3B82F6", "#8B5CF6", "#94A3B8"];
 
@@ -17,7 +19,13 @@ export default function OverviewTab() {
   const { data: txns = [] } = useTransactions();
   const { data: bookingsData } = useMyBookings();
   const { data: verification } = useMyVerification();
+  const { data: myServices } = useMyServices();
+  const { data: schedule } = useMySchedule();
   const bookings = bookingsData?.items ?? [];
+
+  // Things that silently stop a provider from receiving any bookings.
+  const noServices = myServices?.length === 0;
+  const noAvailability = schedule?.rules.length === 0;
 
   const now = new Date();
   const credits = txns.filter((t) => t.type === "CREDIT");
@@ -58,6 +66,31 @@ export default function OverviewTab() {
 
   return (
     <div className="space-y-5">
+      {/* Blockers first — these stop bookings entirely. */}
+      {noServices && (
+        <Card className="p-4 flex items-start gap-3 ring-1 ring-rose-200 bg-rose-50">
+          <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-bold text-sm text-rose-900">You have no services listed</div>
+            <p className="text-xs text-rose-800 mt-0.5">
+              Clients can&apos;t find or book you until you add at least one service. Open the <strong>Services</strong> tab to add one — it takes a minute.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {noAvailability && (
+        <Card className="p-4 flex items-start gap-3 ring-1 ring-rose-200 bg-rose-50">
+          <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-bold text-sm text-rose-900">No working hours set</div>
+            <p className="text-xs text-rose-800 mt-0.5">
+              Every date will show as fully booked until you set your weekly hours in the <strong>Availability</strong> tab.
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* Nudge providers who skipped verification during signup. */}
       {!verification && (
         <Card className="p-4 flex items-start gap-3 ring-1 ring-amber-200 bg-amber-50">
