@@ -10,59 +10,55 @@
  */
 const UTC = "UTC" as const;
 
-export function formatBookingDate(iso: string): string {
+/**
+ * Parse an ISO string, returning null when it isn't a usable date.
+ *
+ * `new Date("nonsense")` does NOT throw — it produces an Invalid Date whose
+ * toLocale* methods return the literal string "Invalid Date". Without this
+ * guard that text would render straight into the UI.
+ */
+function parse(iso: string): Date | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function format(iso: string, options: Intl.DateTimeFormatOptions): string {
+  const d = parse(iso);
+  if (!d) return "";
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      timeZone: UTC,
-    });
+    return d.toLocaleString(undefined, { ...options, timeZone: UTC });
   } catch {
     return "";
   }
+}
+
+export function formatBookingDate(iso: string): string {
+  return format(iso, { weekday: "short", month: "short", day: "numeric" });
 }
 
 export function formatBookingTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: UTC,
-    });
-  } catch {
-    return "";
-  }
+  return format(iso, { hour: "numeric", minute: "2-digit" });
 }
 
 export function formatBookingDateTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: UTC,
-    });
-  } catch {
-    return "";
-  }
+  return format(iso, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /** Short form used in lists: "Aug 5, 9:00 AM". */
 export function formatBookingShort(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: UTC,
-    });
-  } catch {
-    return "";
-  }
+  return format(iso, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /**

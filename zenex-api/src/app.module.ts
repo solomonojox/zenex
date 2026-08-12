@@ -12,6 +12,7 @@ import { UsersModule } from './modules/users/users.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
+import { QuotesModule } from './modules/quotes/quotes.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
 import { MailModule } from './modules/mail/mail.module';
@@ -45,6 +46,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     ProvidersModule,
     BookingsModule,
     AvailabilityModule,
+    QuotesModule,
     ReviewsModule,
     FavoritesModule,
     MessagesModule,

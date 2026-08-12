@@ -187,6 +187,61 @@ async function main() {
   }
   console.log(`  availability set for ${allProviders.length} providers`);
 
+  // Instant-quote pricing: price from property size, no browsing required.
+  const pricingCount = await prisma.pricingRule.count({
+    where: { tenantId: tenant.id },
+  });
+  if (pricingCount === 0) {
+    await prisma.pricingRule.createMany({
+      data: [
+        {
+          tenantId: tenant.id,
+          key: 'standard',
+          label: 'Standard Clean',
+          description:
+            'Kitchen, bathrooms, bedrooms and living areas — dusted, vacuumed and wiped down.',
+          basePrice: 89,
+          perBedroom: 20,
+          perBathroom: 25,
+          baseMinutes: 120,
+          minsPerBedroom: 30,
+          minsPerBathroom: 30,
+          popular: true,
+          sortOrder: 1,
+        },
+        {
+          tenantId: tenant.id,
+          key: 'deep',
+          label: 'Deep Clean',
+          description:
+            'Everything in Standard plus appliances, baseboards, window sills and interior cabinets.',
+          basePrice: 169,
+          perBedroom: 30,
+          perBathroom: 35,
+          baseMinutes: 240,
+          minsPerBedroom: 45,
+          minsPerBathroom: 40,
+          sortOrder: 2,
+        },
+        {
+          tenantId: tenant.id,
+          key: 'move',
+          label: 'Move In / Out',
+          description:
+            'Full property clean for moving transitions — inspection ready, inside everything.',
+          basePrice: 209,
+          perBedroom: 35,
+          perBathroom: 40,
+          baseMinutes: 300,
+          minsPerBedroom: 45,
+          minsPerBathroom: 45,
+          sortOrder: 3,
+        },
+      ],
+    });
+    console.log('  seeded 3 instant pricing rules');
+  }
+
   // Subscription plans (only if none exist for this tenant yet)
   const planCount = await prisma.subscriptionPlan.count({
     where: { tenantId: tenant.id },

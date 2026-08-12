@@ -96,6 +96,13 @@ export interface UpdateProviderInput {
   tags?: string[];
 }
 
+export interface ServiceInput {
+  name: string;
+  description?: string;
+  duration?: string;
+  price: number;
+}
+
 export const providersApi = {
   list: async (params: ProviderQuery = {}): Promise<Paginated<Provider>> => {
     const { data } = await axios.get("/providers", { params });
@@ -105,4 +112,20 @@ export const providersApi = {
     mapProvider((await axios.get(`/providers/${id}`)).data),
   updateMine: async (dto: UpdateProviderInput) =>
     (await axios.patch("/providers/me/profile", dto)).data,
+
+  // ── Own service list ──
+  listMyServices: async (): Promise<ApiService[]> =>
+    (await axios.get("/providers/me/services")).data,
+
+  createMyService: async (dto: ServiceInput): Promise<ApiService> =>
+    (await axios.post("/providers/me/services", dto)).data,
+
+  updateMyService: async (
+    id: string,
+    dto: Partial<ServiceInput>,
+  ): Promise<ApiService> =>
+    (await axios.patch(`/providers/me/services/${id}`, dto)).data,
+
+  deleteMyService: async (id: string) =>
+    (await axios.delete(`/providers/me/services/${id}`)).data,
 };

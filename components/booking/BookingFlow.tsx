@@ -8,6 +8,7 @@ import { EXTRAS_LIST } from "@/lib/data";
 import { useAuth } from "@/context/auth/useAuth";
 import { useCreateBooking, useCheckout, useQuote } from "@/lib/queries/bookings";
 import { formatBookingDateTime, formatBookingTime } from "@/lib/utils/datetime";
+import { durationFromLabel } from "@/lib/utils/duration";
 import ProgressSteps from "./ProgressSteps";
 import ServiceStep from "./ServiceStep";
 import DateTimeStep from "./DateTimeStep";
@@ -33,12 +34,6 @@ function defaultDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Rough job length from a service's duration label, e.g. "2–3 hrs" → 120. */
-function durationFromLabel(label?: string) {
-  if (!label) return 120;
-  const n = parseInt(label, 10);
-  return Number.isFinite(n) && n > 0 ? n * 60 : 120;
-}
 
 function BookingFlowInner({ provider }: { provider: Provider }) {
   const router = useRouter();

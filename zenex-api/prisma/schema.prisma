@@ -91,6 +91,7 @@ model Tenant {
   serviceCategories ServiceCategory[]
   subscriptionPlans SubscriptionPlan[]
   disputes          Dispute[]
+  pricingRules      PricingRule[]
 
   @@map("tenants")
 }
@@ -211,6 +212,38 @@ model ProviderProfile {
   @@index([tenantId])
   @@index([location])
   @@map("provider_profiles")
+}
+
+// ─────────────── Instant pricing ───────────────
+
+/// Drives the "price in 60 seconds" quote: a customer gives property size and
+/// gets an exact price without browsing providers. One row per service type.
+model PricingRule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  /// Stable key used by the API, e.g. "standard" | "deep" | "move".
+  key             String
+  label           String
+  description     String?
+  /// Price covering a 1-bedroom, 1-bathroom home.
+  basePrice       Float
+  perBedroom      Float    @default(0)
+  perBathroom     Float    @default(0)
+  /// Job length for the base property, plus time added per extra room.
+  baseMinutes     Int      @default(120)
+  minsPerBedroom  Int      @default(30)
+  minsPerBathroom Int      @default(30)
+  popular         Boolean  @default(false)
+  active          Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("pricing_rules")
 }
 
 // ─────────────── Availability ───────────────
