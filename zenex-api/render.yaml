@@ -6,7 +6,11 @@ services:
     name: zenex-api
     runtime: node
     plan: starter
-    region: oregon
+    # Render has no Canadian region. Ohio is the closest to the Supabase
+    # database in ca-central-1 (Montreal) — roughly 20ms vs ~75ms from Oregon.
+    # Every API request makes several DB round-trips, so this hop dominates
+    # perceived speed far more than the browser-to-API distance.
+    region: ohio
     rootDir: zenex-api
     buildCommand: npm ci && npm run build
     # Runs pending migrations before booting, so deploys stay in sync with the DB.
