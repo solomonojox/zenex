@@ -25,6 +25,7 @@ function dashboardFor(role?: string) {
 export default function Nav() {
   const [mob, setMob] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+  console.log(user);
 
   const displayName =
     user?.firstName || user?.email?.split("@")[0] || "Account";
@@ -46,7 +47,14 @@ export default function Nav() {
         <nav className="hidden md:flex items-center gap-1">
           <Link href="/search" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Find Cleaners</Link>
           <Link href="/" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">How It Works</Link>
-          <Link href="/auth?mode=signup&role=provider" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Become a Pro</Link>
+
+          {user?.role === "PROVIDER" && (
+            <Link href="/provider" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">My Dashboard</Link>
+          )}
+
+          {user?.role !== "PROVIDER" && (
+            <Link href="/auth?mode=signup&role=provider" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Become a Pro</Link>
+          )}
         </nav>
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
