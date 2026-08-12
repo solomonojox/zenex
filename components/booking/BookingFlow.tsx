@@ -33,11 +33,30 @@ function defaultDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Rough job length from a service's duration label, e.g. "2–3 hrs" → 120. */
-function durationFromLabel(label?: string) {
-  if (!label) return 120;
-  const n = parseInt(label, 10);
-  return Number.isFinite(n) && n > 0 ? n * 60 : 120;
+const DEFAULT_DURATION_MINS = 120;
+
+/**
+ * Job length in minutes from a provider's free-text duration label.
+ * Providers type these by hand, so handle both units and ranges:
+ *   "2–3 hrs" → 120 · "90 mins" → 90 · "1.5 hours" → 90 · "" → 120
+ * Assuming hours unconditionally would turn "90 mins" into 90 hours and
+ * silently leave the client with no bookable slots.
+ */
+function durationFromLabel(label?: string): number {
+  if (!label) return DEFAULT_DURATION_MINS;
+
+  const match = label.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return DEFAULT_DURATION_MINS;
+
+  const value = parseFloat(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_DURATION_MINS;
+
+  const isMinutes = /\bmin/i.test(label);
+  const mins = Math.round(isMinutes ? value : value * 60);
+
+  // Guard against typos producing absurd bookings.
+  if (mins < 15 || mins > 12 * 60) return DEFAULT_DURATION_MINS;
+  return mins;
 }
 
 function BookingFlowInner({ provider }: { provider: Provider }) {

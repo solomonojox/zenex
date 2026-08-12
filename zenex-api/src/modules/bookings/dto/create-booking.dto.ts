@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -41,10 +42,14 @@ export class CreateBookingDto {
   @Min(1)
   hours?: number;
 
-  /** Job length in minutes; used for availability conflict checks. */
+  /**
+   * Job length in minutes; used for availability conflict checks.
+   * Capped at 12 hours so a bad client value can't block a provider's calendar.
+   */
   @IsOptional()
   @IsInt()
   @Min(15)
+  @Max(12 * 60)
   durationMins?: number;
 
   @IsOptional()
