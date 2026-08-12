@@ -6,10 +6,11 @@
   "private": true,
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=18.17"
+    "node": "22.x"
   },
   "scripts": {
-    "build": "prisma generate && nest build",
+    "build": "prisma generate && nest build && npm run verify:build",
+    "verify:build": "node -e \"require('fs').accessSync('dist/main.js'); console.log('✔ dist/main.js emitted')\"",
     "deploy:migrate": "prisma migrate deploy",
     "start:render": "prisma migrate deploy && node dist/main",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
