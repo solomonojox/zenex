@@ -3,6 +3,10 @@
 /node_modules
 /build
 
+# TypeScript incremental build state — must never be committed or cached,
+# it makes the compiler skip emitting on a clean checkout.
+*.tsbuildinfo
+
 # Logs
 logs
 *.log
