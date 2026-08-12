@@ -12,7 +12,10 @@ services:
     # perceived speed far more than the browser-to-API distance.
     region: ohio
     rootDir: zenex-api
-    buildCommand: npm ci && npm run build
+    # `npm ci --include=dev` is required: Render sets NODE_ENV=production, which
+    # would otherwise skip devDependencies — and @nestjs/cli lives there, so
+    # `nest build` would emit nothing and the deploy would fail at startup.
+    buildCommand: npm ci --include=dev && npm run build
     # Runs pending migrations before booting, so deploys stay in sync with the DB.
     startCommand: npm run start:render
     healthCheckPath: /api/health
