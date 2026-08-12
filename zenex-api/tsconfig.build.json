@@ -1,4 +1,11 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Incremental builds must be OFF for production. Render caches the
+    // build directory, so a stale .tsbuildinfo made TypeScript think nothing
+    // had changed and emit no output — while nest's deleteOutDir had already
+    // removed dist/. The build "succeeded" with no dist/main.js.
+    "incremental": false
+  },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }
