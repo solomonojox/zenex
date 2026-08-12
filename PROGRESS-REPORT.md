@@ -1,211 +1,176 @@
 # Zenex — Development Progress Report
 
-**Prepared for:** Client review
-**Date:** 11 August 2026
+**Date:** 12 August 2026
+**Status:** Deployed · full customer and cleaner journeys working end to end
 
 ---
 
-## Summary in one paragraph
+## Summary
 
-Zenex started as a design prototype — screens that looked right but weren't
-connected to anything. Every price, cleaner and booking on screen was fake.
-Today it became a working product: a real system where customers can search
-genuine cleaners, book a specific time, pay with tax correctly calculated, message
-their cleaner live, and leave a review — while cleaners manage their schedule,
-earnings and verification, and administrators oversee the whole marketplace.
+Zenex began as a design prototype — screens that looked finished but were
+connected to nothing. Every cleaner, price and booking was fake, and everything
+reset on page refresh.
 
----
-
-## 1. We built the engine behind the app
-
-Previously the app had **no backend** — no database, no accounts, no way to save
-anything. Everything reset when you refreshed the page.
-
-We built a complete backend system and connected a real database (hosted on
-Supabase, in Canada). The app now permanently stores customers, cleaners,
-bookings, payments, messages, reviews and documents.
-
-**What this means:** Zenex is now a real application rather than a demonstration.
+It is now a working, deployed product. Customers get an exact price from their
+home size, book a real time slot, pay with Canadian sales tax calculated
+correctly, message their cleaner live, and leave a review. Cleaners manage their
+own services, prices, working hours, verification documents and earnings.
+Administrators oversee users, verifications and disputes.
 
 ---
 
-## 2. Accounts and security
+## What was delivered
 
-- Customers, cleaners and administrators can register and sign in, each seeing
-  a different version of the app appropriate to their role.
-- Passwords are stored using strong encryption — even we cannot read them.
-- **Forgot password** works: users receive a secure reset link that expires
-  after one hour and can only be used once.
-- **Stay signed in:** sessions renew quietly in the background, so users aren't
-  kicked out mid-task.
-- **Protection against attack:** sign-in attempts are limited to 5 per minute,
-  which blocks automated password-guessing.
-- Signing out properly ends the session everywhere, not just on that device.
+### 1. The engine (from nothing)
 
----
+A complete backend and a real database hosted in Canada. Customers, cleaners,
+bookings, payments, messages, reviews and documents are now stored permanently.
 
-## 3. Finding and booking a cleaner
+### 2. Accounts and security
 
-- The homepage and search page now show **real cleaners** from the database,
-  filterable by location, rating, price and service type.
-- Each cleaner has a real profile: their services, prices, languages,
-  experience, working hours and genuine customer reviews.
-- Customers can save favourite cleaners with the heart button.
+- Registration and sign-in for customers, cleaners and administrators, each
+  seeing a different version of the app.
+- Passwords stored using strong encryption — unreadable even to us.
+- **Forgot password** with a secure link that expires in one hour and works once.
+- **Stay signed in** — sessions renew quietly in the background instead of
+  logging people out mid-task.
+- **Attack protection** — sign-in attempts limited to 5 per minute.
+- Signing out ends the session on the server, not just the device.
 
-### The booking process
+### 3. Two ways to book
 
-A customer picks a service, chooses a **real available time slot**, adds extras
-(inside fridge, oven, laundry), enters the **service address**, and pays.
+**Instant booking (new — the primary path).** The customer enters bedrooms and
+bathrooms, immediately sees three exact prices including tax, picks a time from
+the combined availability of every cleaner, and the system automatically assigns
+the best-rated verified cleaner who is genuinely free. No browsing required.
+This matches how the leading Canadian competitors convert customers.
 
-Two important improvements here:
+**Browse and choose.** Search real cleaners by location, rating and price, view
+full profiles with services, reviews and published working hours, save
+favourites, and book a specific person.
 
-- **Real availability.** Cleaners set their working hours, and customers only
-  see times that cleaner is genuinely free. Previously the calendar was
-  decorative.
-- **No double-booking.** The system now refuses two bookings for the same
-  cleaner at the same time. This was a serious risk before — two customers
-  could have booked the same hour.
-- **The address is collected.** Previously nothing asked where the job was, so
-  a cleaner would have had no idea where to go. Customers can also add access
-  notes (buzzer code, parking, pets).
+Both paths share the same protections:
 
----
+- **Real availability** — only times the cleaner is genuinely free are offered.
+- **No double-booking** — the system refuses two bookings for the same cleaner
+  at the same time.
+- **Address collected** — with access notes for buzzer codes, parking and pets.
 
-## 4. Money, tax and payments
+### 4. Money and tax
 
-- **Canadian sales tax is calculated correctly** based on the province where
-  the work happens — 13% HST in Ontario, 15% in the Maritimes, 5% GST in
-  Alberta and BC, and the combined GST+QST rate in Quebec.
-- Customers see a clear breakdown before paying: service, extras, tax, total.
-- Zenex takes a **platform commission** on each booking. Importantly, the
-  commission is calculated on the pre-tax amount — sales tax is set aside for
-  remittance to the government, not treated as revenue.
-- Cleaners have an **earnings wallet** showing their balance, transaction
-  history and payouts.
+- **Canadian sales tax calculated by province** — 13% HST in Ontario, 15% in
+  the Maritimes, 5% GST in Alberta and BC, GST+QST in Quebec.
+- Clear breakdown before paying: service, extras, tax, total.
+- Platform commission taken on the **pre-tax** amount — sales tax is set aside
+  for remittance, not treated as revenue.
+- Cleaners have an earnings wallet with transaction history and payouts.
+- **Cancellation policy enforced automatically:** 24+ hours ahead is a full
+  refund; inside 24 hours is 50%. Refunds credit the customer, adjust the
+  cleaner's earnings, and notify both.
+- **Stripe fully integrated**, including the setup that lets cleaners receive
+  payouts to their own bank accounts. Currently in demo mode — adding live keys
+  switches it on with no further development.
 
-### Cancellations and refunds
+### 5. Trust and safety
 
-A fair, automatic policy is now enforced:
+- Cleaners upload government ID, insurance, background checks and business
+  registration; files are stored privately and viewed only through short-lived
+  links.
+- Administrators approve or reject each submission; approved cleaners get a
+  **Verified** badge.
+- **Insurance expiry is enforced** — warnings 30 days out, and the badge is
+  removed automatically if cover lapses.
+- Verification is **optional at signup** ("Skip for now") so early cleaners
+  aren't lost to a long form, with a dashboard reminder until it's done.
 
-- Cancel **24 hours or more** in advance → **full refund**
-- Cancel **within 24 hours** → **50% refund** (the rest compensates the cleaner
-  for the reserved time)
+### 6. Communication
 
-Refunds happen automatically — the customer is credited, the cleaner's earnings
-are adjusted, and both are notified.
+- **Live messaging** between customers and cleaners.
+- **In-app notifications** with unread counts, driven by real events: booking
+  made, confirmed, started, completed, cancelled, paid, new message, new
+  review, verification decided.
+- **Emails** for booking confirmations, cancellations, password resets, and an
+  automatic **reminder 24 hours before every job**.
 
-### Card payments
+### 7. Three dashboards
 
-The system is fully wired for **Stripe**, the payment processor used by most
-online businesses, including the setup that lets cleaners receive payouts to
-their own bank accounts.
+**Customer** — next booking, spending stats, booking history with cancel and
+review, favourites, subscription plans, wallet and receipts.
 
-**Currently running in demo mode** — the entire flow works and is testable, but
-no real money moves. Adding live payment keys switches it on with no further
-development work.
+**Cleaner** — earnings and performance, job list with Accept → Start → Complete,
+**services and pricing they control themselves**, weekly schedule and time off,
+document verification, profile, and payouts.
 
----
+**Administrator** — business overview, user management with suspend/restore,
+verification queue, and dispute handling.
 
-## 5. Trust and safety
+### 8. Subscriptions
 
-This is what customers judge a cleaning marketplace on, so we invested here.
+Recurring plans (Starter, Regular, Premium) — subscribe from the homepage, see
+the renewal date, cancel any time.
 
-- **Cleaner verification:** cleaners upload government ID, insurance
-  certificates, background checks and business registration. Files are stored
-  securely and only ever viewed through short-lived private links.
-- **Administrator review:** staff review each submission and approve or reject
-  it. Approved cleaners get a visible "Verified" badge.
-- **Insurance expiry is tracked and enforced.** Cleaners record when their
-  insurance expires; warnings appear 30 days out, and if it lapses the system
-  **automatically removes their verified badge** until valid cover is supplied.
-  Previously this was cosmetic — an uninsured cleaner could have kept working.
-- **Optional at signup:** new cleaners can upload documents during
-  registration, or choose "Skip for now" and complete it later from their
-  dashboard. This avoids losing early cleaners to a long signup, while a
-  reminder keeps it visible until done.
+### 9. Quality and reliability
 
----
-
-## 6. Communication
-
-- **Live messaging** between customers and cleaners — messages appear instantly
-  without refreshing the page.
-- **In-app notifications** with an unread counter, triggered by real events:
-  booking made, booking confirmed, job started, job completed, cancellation,
-  payment received, new message, new review, verification approved.
-- **Email notifications:** booking confirmations, cancellation notices,
-  password resets, and an automatic **reminder 24 hours before every job** —
-  which is proven to reduce no-shows.
+- **44 automated tests** across both halves of the system, covering the
+  highest-risk logic: tax calculation, scheduling and conflict detection,
+  duration parsing and time formatting.
+- **Error monitoring** ready to alert the team when something breaks in
+  production, with passwords and personal data stripped before sending.
+- **Friendly error and 404 pages** instead of blank screens.
+- **Health check** so the hosting platform detects and recovers from outages.
+- **Legal pages drafted** — Privacy, Terms and Cookies, written to describe how
+  Zenex actually handles data and money.
+- **Deployed** with configuration and a step-by-step guide.
 
 ---
 
-## 7. The three dashboards
+## Problems found and fixed
 
-**Customer:** upcoming booking, spending stats, booking history with cancel and
-review options, favourite cleaners, subscription plans, wallet and receipts.
+Several issues were caught that would have affected real users:
 
-**Cleaner:** earnings and performance figures, job list with a working
-progression (Accept → Start → Complete), a schedule editor for weekly hours and
-time off, document verification, editable profile and pricing, and payout
-management.
-
-**Administrator:** business overview (users, bookings, revenue, open issues),
-user management with suspend/restore, the verification review queue, and
-dispute handling.
-
----
-
-## 8. Subscriptions
-
-Recurring cleaning plans (Starter, Regular, Premium) are live — customers can
-subscribe from the homepage, see their active plan with its renewal date, and
-cancel at any time.
-
----
-
-## 9. Quality, legal and launch readiness
-
-- **Automated tests** covering the highest-risk calculations — tax and
-  scheduling. 28 tests, all passing. These catch mistakes before customers do.
-- **Error monitoring** ready to alert the team the moment something breaks in
-  production, with passwords and personal data stripped out before sending.
-- **Friendly error pages** instead of blank screens when something goes wrong.
-- **Legal pages drafted** — Privacy Policy, Terms of Service and Cookie Policy,
-  written to accurately describe how Zenex actually handles data and money.
-- **Deployment prepared** — configuration and a step-by-step guide for putting
-  Zenex online, plus a system health check so the hosting platform can detect
-  outages automatically.
+| Issue | Consequence if shipped |
+| ----- | ---------------------- |
+| No availability system | Two customers could book the same cleaner for the same hour |
+| Booking never asked for an address | The cleaner wouldn't know where to go |
+| New cleaners had no working hours | Every date showed "no openings" — they'd assume the platform was broken |
+| Cleaners with no services appeared in search | Customers hit dead-end profiles |
+| Durations like "90 mins" read as 90 hours | No bookable slots, with no explanation |
+| Times shown in the wrong timezone | Picking 8:00 AM displayed 4:00 AM on the confirmation |
+| One customer's data cached for the next | A signed-in user briefly saw the previous user's dashboard |
+| "Invalid Date" could render on screen | Visible broken text on a booking card |
+| Sign-in had no rate limit | 100 password guesses per minute |
+| Messaging accepted any website's connection | Cross-site access to a live chat channel |
+| Cancelling a paid booking refunded nothing | Customers charged for cancelled work |
+| Expired insurance kept the Verified badge | Uninsured cleaners still shown as verified |
 
 ---
 
 ## Where things stand
 
-**Ready now:** the complete customer journey (search → book → pay → message →
-review), the complete cleaner journey (sign up → get verified → set availability
-→ accept jobs → get paid), and full administrative oversight. The app is tested,
-documented and prepared for launch.
+**Working now:** the complete customer journey (instant price → book → pay →
+message → review → cancel with refund), the complete cleaner journey (sign up →
+verify → set services and hours → accept jobs → get paid), and full
+administrative oversight — all live.
 
-### Before accepting real customers
+### Before taking real customers
 
-These are business steps rather than development work:
+These are business steps, not development:
 
-1. **Legal review.** The policy pages are accurate drafts but must be reviewed
-   by a Canadian lawyer — Zenex stores government ID documents, so privacy
-   obligations are real.
+1. **Legal review** of the draft policy pages by a Canadian lawyer — Zenex
+   stores government ID documents, so privacy obligations are real.
 2. **Accountant sign-off** on sales-tax registration and rates.
 3. **Activate live payments** by connecting a Stripe account.
-4. **Recruit cleaners.** A marketplace needs supply before demand — this is now
-   the main commercial task, not a technical one.
+4. **Recruit cleaners.** A marketplace needs supply before demand. This is now
+   the main commercial task — the product side is ready.
+5. **Tune the instant pricing** (base price and per-room amounts) to real
+   market rates.
 
 ### Recommended next development
 
-- Let cleaners add and edit their own services and prices (currently
-  administrator-managed).
 - Email address confirmation at signup.
-- Instant pricing from home size (bedrooms/bathrooms) with automatic cleaner
-  matching — this is how the leading Canadian competitors convert customers,
-  and would be Zenex's strongest competitive move.
 - Background-check integration with a screening provider.
+- Per-city timezones (currently one consistent time standard).
+- Customer-raised disputes (today only administrators can open one).
 - A mobile app.
 
 ---
