@@ -5,7 +5,7 @@ import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Zenex — Canada's Trusted Cleaning Marketplace",
+  title: "Zenex - Canada's Trusted Cleaning Marketplace",
   description: "Book vetted, insured cleaning professionals across Canada in under 3 minutes.",
   icons: {
     icon: '/favicon.ico',
