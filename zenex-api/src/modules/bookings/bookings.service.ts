@@ -45,8 +45,15 @@ export class BookingsService {
     return 'BK-' + Math.random().toString(36).slice(2, 8).toUpperCase();
   }
 
-  /** Client creates a booking (maps to the 5-step booking flow). */
-  async create(user: AuthUser, dto: CreateBookingDto) {
+  /**
+   * Server-only overrides. Deliberately NOT part of CreateBookingDto — if a
+   * client could send these it could set its own price.
+   */
+  async create(
+    user: AuthUser,
+    dto: CreateBookingDto,
+    internal?: { basePrice?: number; serviceLabel?: string },
+  ) {
     const client = await this.prisma.clientProfile.findUnique({
       where: { userId: user.id },
     });
@@ -61,10 +68,14 @@ export class BookingsService {
       throw new NotFoundException('Provider not found');
     }
 
-    // Base price: from the chosen service, else hourly rate * hours.
+    // Base price: an instant-quote override, then the chosen service,
+    // else hourly rate * hours.
     let basePrice: number;
     let serviceId: string | undefined = dto.serviceId;
-    if (dto.serviceId) {
+    if (internal?.basePrice !== undefined) {
+      basePrice = internal.basePrice;
+      serviceId = undefined;
+    } else if (dto.serviceId) {
       const service = await this.prisma.service.findFirst({
         where: { id: dto.serviceId, providerId: provider.id },
       });
@@ -118,7 +129,16 @@ export class BookingsService {
         ...(serviceId ? { service: { connect: { id: serviceId } } } : {}),
         scheduledFor,
         durationMins,
+        // Instant bookings have no Service row, so keep the description in
+        // notes where the provider will still see it.
         timeSlot: dto.timeSlot,
+        ...(internal?.serviceLabel
+          ? {
+              notes: [internal.serviceLabel, dto.notes]
+                .filter(Boolean)
+                .join(' — '),
+            }
+          : {}),
         // Instant-book providers auto-confirm; others start pending.
         status: provider.instant
           ? BookingStatus.CONFIRMED
