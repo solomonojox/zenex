@@ -1,4 +1,5 @@
 import Hero from "@/components/landing/Hero";
+import InstantQuote from "@/components/landing/InstantQuote";
 import TrustBar from "@/components/landing/TrustBar";
 import CityTabs from "@/components/landing/CityTabs";
 import ServiceCategories from "@/components/landing/ServiceCategories";
@@ -14,6 +15,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFB]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <Hero />
+      {/* Primary conversion path: price from property size, no browsing. */}
+      <InstantQuote />
       <TrustBar />
       <CityTabs />
       <ServiceCategories />
