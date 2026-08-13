@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
 
@@ -11,7 +12,10 @@ import { SkipThrottle } from '@nestjs/throttler';
 export class HealthController {
   private readonly startedAt = Date.now();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
   @Public()
   @SkipThrottle()
@@ -27,6 +31,11 @@ export class HealthController {
     return {
       status: database === 'up' ? 'ok' : 'degraded',
       database,
+      // Whether email is actually being sent. "log-mode" means every template
+      // is written to the server log and nothing leaves the box — the usual
+      // reason a user reports never receiving a welcome email. Only the mode
+      // and the sender are exposed; the token is never returned.
+      mail: this.mail.status,
       uptimeSeconds: Math.floor((Date.now() - this.startedAt) / 1000),
       env: process.env.NODE_ENV ?? 'development',
       timestamp: new Date().toISOString(),

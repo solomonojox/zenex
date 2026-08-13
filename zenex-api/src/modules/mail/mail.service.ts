@@ -79,6 +79,29 @@ export class MailService {
     return !!this.token && !!this.fromAddress;
   }
 
+  /**
+   * Why email is or isn't sending, safe to expose publicly.
+   *
+   * Surfaced on /api/health because "no email arrived" is otherwise
+   * indistinguishable from the outside: log mode fails silently by design, so
+   * the app looks healthy while nothing is delivered. Never includes the token.
+   */
+  get status() {
+    const reasons: string[] = [];
+    if (!this.token) reasons.push('ZEPTOMAIL_TOKEN is not set');
+    if (!this.fromAddress) reasons.push('MAIL_FROM is not set');
+
+    return {
+      mode: this.enabled ? ('live' as const) : ('log-mode' as const),
+      from: this.fromAddress || null,
+      // The sender domain must be verified in the ZeptoMail agent or every
+      // send is rejected, so it is worth showing at a glance.
+      fromDomain: this.fromAddress.split('@')[1] ?? null,
+      endpoint: this.apiUrl,
+      ...(reasons.length ? { blockedBy: reasons } : {}),
+    };
+  }
+
   /** Never throws: a failed email must not roll back the action that caused it. */
   async send(input: SendMailInput): Promise<void> {
     if (!this.enabled) {
