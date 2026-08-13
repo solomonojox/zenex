@@ -69,6 +69,8 @@ enum DisputeStatus {
 }
 
 enum SubscriptionStatus {
+  /// Created, consented to, but not yet paid for. Grants nothing.
+  PENDING
   ACTIVE
   PAUSED
   CANCELLED
@@ -189,10 +191,11 @@ model ClientProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings  Booking[]
-  reviews   Review[]
-  favorites Favorite[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings      Booking[]
+  reviews       Review[]
+  favorites     Favorite[]
+  subscriptions Subscription[]
 
   @@map("client_profiles")
 }
@@ -529,6 +532,11 @@ model SubscriptionPlan {
   frequency     String // Monthly / Bi-weekly / Weekly
   price         Float
   savesPercent  Int      @default(0)
+  /// Standard cleans included per billing period. Granted on subscribe and on
+  /// each renewal; a booking spends one when the subscriber has any left.
+  includedCleans Int     @default(0)
+  /// Discount applied to booking extras while the subscription is active.
+  extrasDiscountPercent Int @default(0)
   features      String[]
   popular       Boolean  @default(false)
   stripePriceId String?
@@ -549,8 +557,20 @@ model Subscription {
   startedAt   DateTime           @default(now())
   renewsAt    DateTime?
   stripeSubId String?
+  /// Cleans left in the current period. Reset to the plan's allowance each
+  /// renewal; spent by bookings.
+  cleansRemaining Int            @default(0)
+  /// When the customer ticked the recurring-billing consent box, and the exact
+  /// amount they agreed to. A subscription with no consent record should never
+  /// have been created — this is the evidence if a charge is ever disputed.
+  consentAt        DateTime?
+  consentAmount    Float?
+  /// PENDING until the first payment settles, so an abandoned checkout never
+  /// leaves someone holding an active plan they were not charged for.
+  activatedAt      DateTime?
 
-  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+  client ClientProfile    @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
   @@map("subscriptions")

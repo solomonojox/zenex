@@ -94,7 +94,9 @@ export class StatsService {
             comment: { not: null },
           },
           orderBy: { createdAt: 'desc' },
-          take: 6,
+          // Over-fetch so duplicate reviewers can be dropped below and still
+          // leave enough to fill the section.
+          take: 24,
           select: {
             rating: true,
             comment: true,
@@ -116,20 +118,31 @@ export class StatsService {
       if (city) cityCounts.set(city, (cityCounts.get(city) ?? 0) + 1);
     }
 
-    const testimonials: PublicTestimonial[] = reviews.map((r) => {
+    // One testimonial per reviewer. The same name appearing twice in a row of
+    // three reads as though there are barely any customers.
+    const seenReviewers = new Set<string>();
+    const testimonials: PublicTestimonial[] = [];
+    for (const r of reviews) {
       const first = r.client?.user?.firstName ?? 'A';
       const last = r.client?.user?.lastName ?? '';
-      return {
-        // First name plus last initial — real reviewers, not full names on a
-        // public page.
+      const key = `${first}|${last}`;
+      if (seenReviewers.has(key)) continue;
+      seenReviewers.add(key);
+
+      testimonials.push({
+        // First name plus last initial — they agreed to review a cleaner, not
+        // to have their full name on the marketing page.
         name: last ? `${first} ${last.charAt(0)}.` : first,
         initials: `${first.charAt(0)}${last.charAt(0)}`.toUpperCase(),
-        location: r.client?.city || this.cityOf(r.provider.location) || '',
+        // The provider's city, not the client's: it is where the work was
+        // done, and a client's profile city may be somewhere else entirely.
+        location: this.cityOf(r.provider.location) || r.client?.city || '',
         service: r.booking?.service?.name ?? 'Cleaning',
         rating: r.rating,
         comment: r.comment ?? '',
-      };
-    });
+      });
+      if (testimonials.length >= 6) break;
+    }
 
     return {
       providers,

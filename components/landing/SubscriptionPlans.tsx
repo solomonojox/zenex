@@ -2,25 +2,25 @@
 
 import { useRouter } from "next/navigation";
 import { CheckCircle } from "lucide-react";
-import { toast } from "react-toastify";
 import { useAuth } from "@/context/auth/useAuth";
-import { usePlans, useSubscribe } from "@/lib/queries/subscriptions";
+import { usePlans } from "@/lib/queries/subscriptions";
 
 export default function SubscriptionPlans() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const { data: plans = [], isLoading } = usePlans();
-  const subscribe = useSubscribe();
 
-  const onSubscribe = (planId: string, name: string) => {
+  // Navigate, never charge. A card on a marketing page should not be able to
+  // start a recurring payment — the customer sees the total, the tax, the
+  // renewal date and the cancellation terms on /subscribe first, and consents
+  // there. Signed-out visitors keep their choice through login via returnTo.
+  const onChoose = (planId: string) => {
+    const target = `/subscribe?plan=${encodeURIComponent(planId)}`;
     if (!isAuthenticated) {
-      router.push("/auth?mode=login");
+      router.push(`/auth?mode=login&returnTo=${encodeURIComponent(target)}`);
       return;
     }
-    subscribe.mutate(planId, {
-      onSuccess: () => toast.success(`Subscribed to the ${name} plan!`),
-      onError: (e) => toast.error((e as Error).message || "Could not subscribe"),
-    });
+    router.push(target);
   };
 
   return (
@@ -41,7 +41,6 @@ export default function SubscriptionPlans() {
         ) : (
           <div className="grid sm:grid-cols-3 gap-5">
             {plans.map((plan) => {
-              const pending = subscribe.isPending && subscribe.variables === plan.id;
               const isProvider = user?.role === "PROVIDER";
               return (
                 <div key={plan.id} className={`relative rounded-3xl p-6 ${plan.popular ? "bg-gradient-to-b from-teal-600 to-teal-700 text-white shadow-2xl shadow-teal-200 ring-0" : "bg-white ring-1 ring-black/[0.06] shadow-sm"}`}>
@@ -57,12 +56,12 @@ export default function SubscriptionPlans() {
                     ))}
                   </ul>
                   <button
-                    onClick={() => onSubscribe(plan.id, plan.name)}
-                    disabled={pending || isProvider}
+                    onClick={() => onChoose(plan.id)}
+                    disabled={isProvider}
                     title={isProvider ? "Subscriptions are for client accounts" : undefined}
                     className={`block text-center w-full py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-60 ${plan.popular ? "bg-white text-teal-700 hover:bg-teal-50" : "bg-teal-600 text-white hover:bg-teal-700 shadow-sm shadow-teal-200"}`}
                   >
-                    {pending ? "Subscribing…" : isAuthenticated ? `Get ${plan.name}` : "Sign in to subscribe"}
+                    Choose {plan.name}
                   </button>
                 </div>
               );

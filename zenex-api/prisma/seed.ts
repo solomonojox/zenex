@@ -226,6 +226,7 @@ const CLIENTS = [
   { firstName: 'Rachel', lastName: 'Boucher', city: 'Mississauga' },
   { firstName: 'Ibrahim', lastName: 'Farah', city: 'Toronto' },
   { firstName: 'Hannah', lastName: 'Whitfield', city: 'Vancouver' },
+  { firstName: 'Colin', lastName: 'Reid', city: 'Calgary' },
 ];
 
 /** [rating, comment, daysAgo] keyed by provider first name. */
@@ -377,8 +378,8 @@ async function main() {
   // ── Reviewer accounts ──
   // Alexandra goes in the pool too, so the demo login has real history on its
   // dashboard rather than an empty state.
-  const clientIds: string[] = demoClient.clientProfile
-    ? [demoClient.clientProfile.id]
+  const clientPool: { id: string; city: string }[] = demoClient.clientProfile
+    ? [{ id: demoClient.clientProfile.id, city: 'Toronto' }]
     : [];
 
   for (const c of CLIENTS) {
@@ -398,9 +399,9 @@ async function main() {
       },
       include: { clientProfile: true },
     });
-    if (u.clientProfile) clientIds.push(u.clientProfile.id);
+    if (u.clientProfile) clientPool.push({ id: u.clientProfile.id, city: c.city });
   }
-  console.log(`  ${clientIds.length} client accounts available as reviewers`);
+  console.log(`  ${clientPool.length} client accounts available as reviewers`);
 
   // ── Completed bookings + the reviews that hang off them ──
   // References are prefixed BK-S so seeded history is trivially distinguishable
@@ -410,7 +411,16 @@ async function main() {
 
   for (const p of PROVIDERS) {
     const rows = REVIEWS[p.firstName] ?? [];
-    if (!rows.length || !clientIds.length) continue;
+    if (!rows.length || !clientPool.length) continue;
+
+    // Reviewers should live where the cleaner works. Assigning them
+    // round-robin produced a Vancouver client reviewing a Scarborough cleaner
+    // on the landing page — obviously fake to anyone reading it.
+    const providerLocation = p.location.toLowerCase();
+    const local = clientPool.filter((c) =>
+      providerLocation.includes(c.city.toLowerCase()),
+    );
+    const pool = local.length ? local : clientPool;
 
     const profile = await prisma.providerProfile.findFirst({
       where: {
@@ -424,9 +434,9 @@ async function main() {
     for (const [rating, comment, daysAgo] of rows) {
       ref += 1;
       const reference = `BK-S${ref}`;
-      // Deterministic round-robin: the same run always produces the same
-      // pairing, so screenshots and tests stay stable.
-      const clientId = clientIds[(ref - 9001) % clientIds.length];
+      // Deterministic rotation within the local pool: the same run always
+      // produces the same pairing, so screenshots and tests stay stable.
+      const clientId = pool[(ref - 9001) % pool.length].id;
       const service = profile.services[0];
       const basePrice = service?.price ?? profile.hourlyRate * 2;
       // Same tax engine the live booking path uses, so seeded totals are

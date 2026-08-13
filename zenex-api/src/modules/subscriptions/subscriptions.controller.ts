@@ -24,9 +24,15 @@ import {
 export class SubscriptionsController {
   constructor(private readonly service: SubscriptionsService) {}
 
+  /** Price breakdown for the checkout page. Charges nothing. */
+  @Get('quote/:planId')
+  quote(@CurrentUser() user: AuthUser, @Param('planId') planId: string) {
+    return this.service.quote(user, planId);
+  }
+
   @Post()
   subscribe(@CurrentUser() user: AuthUser, @Body() dto: CreateSubscriptionDto) {
-    return this.service.subscribe(user, dto.planId);
+    return this.service.subscribe(user, dto.planId, dto.consent === true);
   }
 
   @Get('me')

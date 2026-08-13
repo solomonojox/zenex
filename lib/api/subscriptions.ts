@@ -19,6 +19,26 @@ export interface ApiSubscription {
   plan?: ApiPlan;
 }
 
+export interface SubscriptionQuote {
+  plan: ApiPlan;
+  subtotal: number;
+  taxAmount: number;
+  taxLabel: string;
+  province: string;
+  total: number;
+  firstChargeOn: string;
+  renewsAt: string;
+  cancellationTerms: string;
+}
+
+/** Demo mode settles immediately; live mode hands off to Stripe Checkout. */
+export interface SubscribeResult {
+  mode: "demo" | "live";
+  subscriptionId: string;
+  checkoutUrl?: string | null;
+  subscription?: ApiSubscription;
+}
+
 export const subscriptionsApi = {
   plans: async (): Promise<ApiPlan[]> =>
     (await axios.get("/subscription-plans")).data,
@@ -26,8 +46,13 @@ export const subscriptionsApi = {
   mine: async (): Promise<ApiSubscription[]> =>
     (await axios.get("/subscriptions/me")).data,
 
-  subscribe: async (planId: string): Promise<ApiSubscription> =>
-    (await axios.post("/subscriptions", { planId })).data,
+  quote: async (planId: string): Promise<SubscriptionQuote> =>
+    (await axios.get(`/subscriptions/quote/${planId}`)).data,
+
+  subscribe: async (planId: string): Promise<SubscribeResult> =>
+    // consent is always true here: the button that calls this is disabled
+    // until the box is ticked, and the API rejects the request without it.
+    (await axios.post("/subscriptions", { planId, consent: true })).data,
 
   cancel: async (id: string): Promise<ApiSubscription> =>
     (await axios.patch(`/subscriptions/${id}/cancel`)).data,

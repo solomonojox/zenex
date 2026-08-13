@@ -18,6 +18,7 @@ import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { StripeService } from './stripe.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class PaymentsService {
@@ -28,6 +29,7 @@ export class PaymentsService {
     private readonly stripe: StripeService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   private ref(prefix: string) {
@@ -254,6 +256,23 @@ export class PaymentsService {
       );
     } catch {
       throw new BadRequestException('Invalid webhook signature');
+    }
+
+    // A subscription only becomes ACTIVE once Stripe confirms the first
+    // payment. Until this fires the row sits PENDING and grants nothing, so an
+    // abandoned checkout never leaves someone holding an unpaid plan.
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const subscriptionId =
+        session.metadata?.subscriptionId ?? session.client_reference_id;
+      if (subscriptionId) {
+        const stripeSubId =
+          typeof session.subscription === 'string'
+            ? session.subscription
+            : (session.subscription?.id ?? undefined);
+        await this.subscriptions.activate(subscriptionId, stripeSubId);
+      }
+      return { received: true };
     }
 
     if (event.type === 'payment_intent.succeeded') {
