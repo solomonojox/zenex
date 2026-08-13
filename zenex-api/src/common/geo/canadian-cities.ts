@@ -145,6 +145,21 @@ export function distanceKm(a: Coords, b: Coords): number {
  * callers can fall back rather than silently excluding a provider on the basis
  * of a spelling this table happens not to know.
  */
+/**
+ * Kilometres between two free-text locations, or null if either is unknown.
+ * Used for the "Nearest" sort, which needs an orderable number rather than
+ * the yes/no that isWithinRadius gives.
+ */
+export function distanceBetween(
+  a?: string | null,
+  b?: string | null,
+): number | null {
+  const from = resolveCity(a);
+  const to = resolveCity(b);
+  if (!from || !to) return null;
+  return distanceKm(from, to);
+}
+
 export function isWithinRadius(
   providerLocation: string | null | undefined,
   clientLocation: string | null | undefined,

@@ -4,7 +4,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QueryProvidersDto } from './dto/query-providers.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { CreateServiceDto, UpdateServiceDto } from './dto/service.dto';
-import { isWithinRadius } from '../../common/geo/canadian-cities';
+import {
+  distanceBetween,
+  isWithinRadius,
+} from '../../common/geo/canadian-cities';
 
 /**
  * Ceiling on rows pulled when a location filter is active.
@@ -79,6 +82,21 @@ export class ProvidersService {
         // did before rather than dropping the provider from search entirely.
         return within ?? p.location.toLowerCase().includes(city);
       });
+
+      // "Nearest" only means anything once we know where the client is, which
+      // is why it lives in this branch. Providers whose town isn't in the
+      // coordinate table sink to the bottom rather than sorting as distance 0
+      // and jumping to the front.
+      if (query.sort === 'distance') {
+        nearby.sort((a, b) => {
+          const da = distanceBetween(a.location, location);
+          const db = distanceBetween(b.location, location);
+          if (da === null && db === null) return 0;
+          if (da === null) return 1;
+          if (db === null) return -1;
+          return da - db;
+        });
+      }
 
       const total = nearby.length;
       return {

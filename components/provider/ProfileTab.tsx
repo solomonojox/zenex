@@ -106,10 +106,17 @@ export default function ProfileTab() {
 
       <Card className="p-6">
         <h3 className="font-bold text-slate-900 mb-4">Performance</h3>
+        {/* "Response" dropped — responseTime is a seeded string nobody
+            measures or can edit, so it told the provider nothing true. */}
         <div className="grid grid-cols-3 gap-4 text-center">
-          <div><div className="text-xl font-extrabold text-teal-600">{(pp?.rating ?? 0).toFixed(2)}</div><div className="text-xs text-slate-400 mt-0.5">Rating ({pp?.reviewsCount ?? 0})</div></div>
+          <div>
+            <div className="text-xl font-extrabold text-teal-600">
+              {(pp?.reviewsCount ?? 0) > 0 ? (pp?.rating ?? 0).toFixed(2) : "—"}
+            </div>
+            <div className="text-xs text-slate-400 mt-0.5">Rating ({pp?.reviewsCount ?? 0})</div>
+          </div>
           <div><div className="text-xl font-extrabold text-teal-600">{pp?.completions ?? 0}</div><div className="text-xs text-slate-400 mt-0.5">Jobs done</div></div>
-          <div><div className="text-xl font-extrabold text-teal-600">{pp?.responseTime || "—"}</div><div className="text-xs text-slate-400 mt-0.5">Response</div></div>
+          <div><div className="text-xl font-extrabold text-teal-600">{pp?.verified ? "Yes" : "No"}</div><div className="text-xs text-slate-400 mt-0.5">Verified</div></div>
         </div>
       </Card>
     </div>

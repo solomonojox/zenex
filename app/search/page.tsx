@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Brain } from "lucide-react";
+import { MapPin } from "lucide-react";
 import ProviderCard from "@/components/ui/ProviderCard";
 import ProviderListItem from "@/components/search/ProviderListItem";
 import SearchFilters, { type SearchFilterState } from "@/components/search/SearchFilters";
@@ -13,11 +13,34 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
 
-  const [filters, setFilters] = useState<SearchFilterState>({ sort: "Top Rated", tags: [], layout: "grid", minRating: 0, location: "" });
+  // Seed the filters from the URL so the city tabs and service tiles on the
+  // landing page actually land you on a filtered result set. Read once as the
+  // initial state — after that the controls own it, or typing would be
+  // overwritten on every render.
+  const [filters, setFilters] = useState<SearchFilterState>(() => {
+    const tag = searchParams.get("tag");
+    return {
+      sort: "Top Rated",
+      tags: tag ? [tag] : [],
+      layout: "grid",
+      minRating: 0,
+      location: searchParams.get("location") ?? "",
+    };
+  });
 
-  // Map UI sort to the API's sort/filter params.
-  const sort = filters.sort === "Lowest Price" ? "price" : "rating";
+  // Map UI sort to the API's sort/filter params. "Instant Book" is a filter
+  // rather than an ordering, so it falls through to the default sort.
+  const SORT_PARAM: Record<string, string> = {
+    "Lowest Price": "price",
+    Nearest: "distance",
+  };
+  const sort = SORT_PARAM[filters.sort] ?? "rating";
   const instant = filters.sort === "Instant Book" ? "true" : undefined;
+
+  // Distance is measured from the location box. Without one there is nothing
+  // to be near, and the API would quietly fall back to rating — so say so
+  // rather than letting the chip look like it did something.
+  const needsLocation = filters.sort === "Nearest" && !filters.location.trim();
 
   const { data, isLoading, isError } = useProviders({
     sort,
@@ -55,11 +78,14 @@ function SearchContent() {
           </div>
         )}
 
-        <div className="bg-gradient-to-r from-violet-50 to-indigo-50 ring-1 ring-violet-100 rounded-2xl p-4 flex items-center gap-4 mb-6">
-          <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Brain className="w-5 h-5" /></div>
-          <div className="flex-1"><div className="font-bold text-sm text-slate-900">AI matched {filtered.length} cleaners to your profile</div><div className="text-xs text-slate-500" style={{ fontFamily: "'Inter', sans-serif" }}>Based on your home type, past bookings, and preferences</div></div>
-          <button className="text-xs font-bold text-violet-600 hover:text-violet-700 shrink-0">Refine ›</button>
-        </div>
+        {needsLocation && (
+          <div className="bg-amber-50 ring-1 ring-amber-200 rounded-2xl p-4 flex items-center gap-3 mb-6">
+            <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-sm font-semibold text-amber-900">
+              Enter a city above to sort by distance — showing top rated for now.
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-bold text-slate-800">

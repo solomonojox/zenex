@@ -18,13 +18,17 @@ export default function ProviderListItem({ p }: { p: Provider }) {
         <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{p.location}</div>
         <div className="flex items-center gap-2 mt-1.5">
           <Stars r={p.rating} /><span className="text-xs font-semibold text-slate-700">{p.rating} ({p.reviews})</span>
-          <span className="text-slate-300">·</span>
-          <span className="text-xs text-violet-600 font-bold flex items-center gap-1">{p.ai_match}% match</span>
+          {p.completions > 0 && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="text-xs text-slate-500">{p.completions} jobs</span>
+            </>
+          )}
         </div>
       </div>
       <div className="text-right shrink-0">
         <div className="font-extrabold text-slate-900 text-lg">${p.price}<span className="text-xs font-normal text-slate-400">/hr</span></div>
-        <div className="text-xs text-slate-400 mt-0.5">{p.responseTime}</div>
+        {/* responseTime was a seeded string, never measured from real replies. */}
         <span className="inline-block mt-2 px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-700 transition-colors">View</span>
       </div>
     </Link>

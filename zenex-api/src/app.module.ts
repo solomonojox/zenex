@@ -15,6 +15,7 @@ import { AvailabilityModule } from './modules/availability/availability.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
+import { StatsModule } from './modules/stats/stats.module';
 import { MailModule } from './modules/mail/mail.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
@@ -38,6 +39,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     PrismaModule,
     SupabaseModule,
     HealthModule,
+    StatsModule,
     NotificationsModule,
     MailModule,
     RemindersModule,

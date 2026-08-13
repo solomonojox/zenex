@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Heart, Award, Bolt, Brain } from "lucide-react";
+import { MapPin, Heart, Award, Bolt } from "lucide-react";
 import type { Provider } from "@/lib/types";
 import Stars from "./Stars";
 import { useAuth } from "@/context/auth/useAuth";
@@ -68,9 +68,13 @@ export default function ProviderCard({ p }: { p: Provider }) {
         <div className="flex items-center gap-2 mb-3">
           <Stars r={p.rating} /><span className="text-xs font-bold text-slate-800">{p.rating}</span><span className="text-xs text-slate-400">({p.reviews})</span>
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex flex-wrap gap-1">{p.tags.slice(0, 2).map((t) => <span key={t} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{t}</span>)}</div>
-          <div className="flex items-center gap-1 text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full"><Brain className="w-3 h-3" />{p.ai_match}% match</div>
+        {/* The "% match" badge was removed: aiMatch is a fixed seed value,
+            identical for every viewer, so it claimed a personalised score that
+            was never calculated. Tags get the full width instead. */}
+        <div className="flex flex-wrap gap-1">
+          {p.tags.slice(0, 3).map((t) => (
+            <span key={t} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{t}</span>
+          ))}
         </div>
       </div>
     </Link>

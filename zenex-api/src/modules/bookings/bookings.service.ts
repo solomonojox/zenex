@@ -509,6 +509,20 @@ export class BookingsService {
       include: bookingInclude,
     });
 
+    // `completions` is shown on the profile as "N jobs done" but nothing ever
+    // incremented it, so it sat frozen at whatever it was seeded with. Bumped
+    // here, and only on the transition *into* COMPLETED, so re-saving the same
+    // status can't inflate the count.
+    if (
+      status === BookingStatus.COMPLETED &&
+      booking.status !== BookingStatus.COMPLETED
+    ) {
+      await this.prisma.providerProfile.update({
+        where: { id: updated.providerId },
+        data: { completions: { increment: 1 } },
+      });
+    }
+
     // Keep the client informed as the job progresses.
     const clientUserId = await this.notifications.userIdForClient(
       updated.clientId,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, Star, CheckCircle, Award, Bolt, Brain, MessageSquare, Heart } from "lucide-react";
+import { ChevronLeft, MapPin, Star, CheckCircle, Award, Bolt, MessageSquare, Heart } from "lucide-react";
 import type { Provider } from "@/lib/types";
 import VBadge from "@/components/ui/VBadge";
 import { useAuth } from "@/context/auth/useAuth";
@@ -49,7 +49,6 @@ export default function ProfileHeader({ p }: { p: Provider }) {
               <span className="flex items-center gap-1 text-slate-600"><MapPin className="w-3.5 h-3.5 text-teal-500" />{p.location}</span>
               <span className="flex items-center gap-1 text-slate-600"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />{p.rating} <span className="text-slate-400">({p.reviews})</span></span>
               <span className="flex items-center gap-1 text-slate-600"><CheckCircle className="w-3.5 h-3.5 text-emerald-500" />{p.completions} jobs</span>
-              <span className="text-violet-600 font-bold flex items-center gap-1 text-xs"><Brain className="w-3 h-3" />{p.ai_match}% match for you</span>
             </div>
           </div>
           <div className="flex gap-2 pb-1 shrink-0">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Clock, CheckCircle, CalendarDays } from "lucide-react";
+import { Globe, Star, CheckCircle, CalendarDays } from "lucide-react";
 import type { Provider } from "@/lib/types";
 import Card from "@/components/ui/Card";
 import { useProviderSchedule } from "@/lib/queries/availability";
@@ -26,10 +26,12 @@ export default function AboutTab({ p }: { p: Provider }) {
         <p className="text-slate-600 text-sm leading-relaxed mb-5" style={{ fontFamily: "'Inter', sans-serif" }}>{p.bio}</p>
         <div className="grid grid-cols-2 gap-4">
           {[
+            // "Response time" removed — it was a seeded string, not measured
+            // from how quickly this person actually replies.
             { I: Globe, l: "Languages", v: p.languages.join(", ") || "—" },
-            { I: Clock, l: "Response time", v: p.responseTime || "—" },
             { I: CheckCircle, l: "Jobs completed", v: p.completions.toLocaleString() },
             { I: CalendarDays, l: "Reviews", v: String(p.reviews) },
+            { I: Star, l: "Rating", v: p.reviews > 0 ? `${p.rating.toFixed(2)} ★` : "No reviews yet" },
           ].map(({ I, l, v }) => (
             <div key={l} className="flex items-start gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0"><I className="w-4 h-4 text-teal-600" /></div>

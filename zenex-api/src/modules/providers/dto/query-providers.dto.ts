@@ -25,9 +25,10 @@ export class QueryProvidersDto {
   @IsBooleanString()
   instant?: string;
 
+  /** `distance` requires `location`; without one it falls back to rating. */
   @IsOptional()
   @IsString()
-  sort?: 'rating' | 'price' | 'ai_match';
+  sort?: 'rating' | 'price' | 'ai_match' | 'distance';
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
