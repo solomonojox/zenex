@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import RouteGuard from "@/components/auth/RouteGuard";
 import { useAuth } from "@/context/auth/useAuth";
 import ClientWallet from "@/components/wallet/ClientWallet";
 import ProviderWallet from "@/components/wallet/ProviderWallet";
@@ -9,14 +9,17 @@ import ProviderWallet from "@/components/wallet/ProviderWallet";
 type WalletTab = "client" | "provider";
 
 export default function WalletPage() {
-  const router = useRouter();
-  const { isAuthenticated, authLoading, user } = useAuth();
+  return (
+    <RouteGuard>
+      <Wallet />
+    </RouteGuard>
+  );
+}
+
+function Wallet() {
+  const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [walletTab, setWalletTab] = useState<WalletTab>("client");
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.replace("/auth?mode=login");
-  }, [authLoading, isAuthenticated, router]);
 
   // Show the wallet matching the user's role.
   useEffect(() => {

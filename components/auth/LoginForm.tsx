@@ -2,23 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { Eye, EyeOff } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { useLogin } from "@/lib/queries/auth";
-
-function destinationFor(role: string) {
-  if (role === "PROVIDER") return "/provider";
-  if (role === "ADMIN") return "/admin";
-  return "/client";
-}
+import { homeFor } from "@/components/auth/RouteGuard";
 
 export default function LoginForm() {
   const [showPass, setShowPass] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { mutate: login, isPending, error } = useLogin();
 
   const submit = () => {
@@ -27,7 +23,16 @@ export default function LoginForm() {
       {
         onSuccess: (tokens) => {
           const { role } = jwtDecode<{ role: string }>(tokens.accessToken);
-          router.push(destinationFor(role));
+          // Return the user to wherever they were headed before the guard
+          // intercepted them; otherwise send them to their own dashboard.
+          // Only relative paths are honoured, so this can't be used to
+          // redirect someone off-site.
+          const returnTo = searchParams.get("returnTo");
+          const safe =
+            returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+              ? returnTo
+              : null;
+          router.push(safe ?? homeFor(role));
         },
       },
     );

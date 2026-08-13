@@ -6,15 +6,32 @@ import { Search, MessageSquare, Wallet, Menu, X, Sparkles, LogOut } from "lucide
 import { useAuth } from "@/context/auth/useAuth";
 import NotificationBell from "./NotificationBell";
 
-const MOBILE_LINKS: { href: string; label: string }[] = [
-  { href: "/", label: "Home" },
-  { href: "/search", label: "Search" },
-  { href: "/client", label: "Client" },
-  { href: "/provider", label: "Provider" },
-  { href: "/wallet", label: "Wallet" },
-  { href: "/messages", label: "Messages" },
-  { href: "/admin", label: "Admin" },
-];
+/** Mobile menu built for the signed-in user — no links to other roles' areas. */
+function mobileLinks(isAuthenticated: boolean, role?: string) {
+  const links = [
+    { href: "/", label: "Home" },
+    { href: "/search", label: "Find Cleaners" },
+    { href: "/#how-it-works", label: "How It Works" },
+  ];
+
+  if (!isAuthenticated) {
+    return [
+      ...links,
+      { href: "/auth?mode=login", label: "Sign in" },
+      { href: "/auth?mode=signup&role=provider", label: "Become a Pro" },
+    ];
+  }
+
+  if (role === "ADMIN") links.push({ href: "/admin", label: "Admin" });
+  else if (role === "PROVIDER") links.push({ href: "/provider", label: "Dashboard" });
+  else links.push({ href: "/client", label: "My Bookings" });
+
+  links.push(
+    { href: "/messages", label: "Messages" },
+    { href: "/wallet", label: "Wallet" },
+  );
+  return links;
+}
 
 function dashboardFor(role?: string) {
   if (role === "PROVIDER") return "/provider";
@@ -25,7 +42,6 @@ function dashboardFor(role?: string) {
 export default function Nav() {
   const [mob, setMob] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
-  console.log(user);
 
   const displayName =
     user?.firstName || user?.email?.split("@")[0] || "Account";
@@ -46,13 +62,19 @@ export default function Nav() {
         </Link>
         <nav className="hidden md:flex items-center gap-1">
           <Link href="/search" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Find Cleaners</Link>
-          <Link href="/" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">How It Works</Link>
+          {/* Anchor, not "/" — this jumps to the section on the landing page
+              instead of silently reloading the home page. */}
+          <Link href="/#how-it-works" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">How It Works</Link>
 
-          {user?.role === "PROVIDER" && (
-            <Link href="/provider" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">My Dashboard</Link>
+          {/* Signed-in users get a direct route to their own area, whichever
+              role they hold — not just providers. */}
+          {isAuthenticated && (
+            <Link href={dashboardFor(user?.role)} className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">My Dashboard</Link>
           )}
 
-          {user?.role !== "PROVIDER" && (
+          {/* Recruitment link — pointless once signed in, and clicking it as a
+              client would try to re-register the same email. */}
+          {!isAuthenticated && (
             <Link href="/auth?mode=signup&role=provider" className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">Become a Pro</Link>
           )}
         </nav>
@@ -84,7 +106,7 @@ export default function Nav() {
       </div>
       {mob && (
         <div className="md:hidden bg-white border-t border-slate-100 px-4 py-3 grid grid-cols-2 gap-1">
-          {MOBILE_LINKS.map((l) => (
+          {mobileLinks(isAuthenticated, user?.role).map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setMob(false)} className="text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-700 rounded-lg capitalize">
               {l.label}
             </Link>

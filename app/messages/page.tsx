@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import RouteGuard from "@/components/auth/RouteGuard";
 import { useAuth } from "@/context/auth/useAuth";
 import {
   useThreads,
@@ -14,9 +15,9 @@ import ThreadList from "@/components/messages/ThreadList";
 import ChatWindow from "@/components/messages/ChatWindow";
 
 function MessagesContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, authLoading, user } = useAuth();
+  // RouteGuard has already confirmed the user is signed in.
+  const { isAuthenticated, user } = useAuth();
 
   // ?thread=<counterpartId> means "open a conversation with this person"
   // (a provider id when you're a client, or a client id when you're a provider).
@@ -26,10 +27,6 @@ function MessagesContent() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const createThread = useCreateThread();
   const handledRef = useRef(false);
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.replace("/auth?mode=login");
-  }, [authLoading, isAuthenticated, router]);
 
   // Resolve the counterpart param to an actual thread (existing or new).
   useEffect(() => {
@@ -87,10 +84,12 @@ function MessagesContent() {
 
 export default function MessagesPage() {
   return (
-    <div className="h-[calc(100vh-4rem)] bg-[#F8FAFB] flex" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <Suspense fallback={null}>
-        <MessagesContent />
-      </Suspense>
-    </div>
+    <RouteGuard>
+      <div className="h-[calc(100vh-4rem)] bg-[#F8FAFB] flex" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <Suspense fallback={null}>
+          <MessagesContent />
+        </Suspense>
+      </div>
+    </RouteGuard>
   );
 }

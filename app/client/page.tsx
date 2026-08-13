@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import RouteGuard from "@/components/auth/RouteGuard";
 import { Plus, Repeat, Wallet, ChevronRight, MessageSquare } from "lucide-react";
 import { useAuth } from "@/context/auth/useAuth";
 import { useMyBookings } from "@/lib/queries/bookings";
@@ -14,13 +14,16 @@ import NotificationsPanel from "@/components/client/NotificationsPanel";
 import SubscriptionsList from "@/components/client/SubscriptionsList";
 
 export default function ClientDashboardPage() {
-  const router = useRouter();
-  const { isAuthenticated, authLoading, user } = useAuth();
-  const { data } = useMyBookings();
+  return (
+    <RouteGuard roles={["CLIENT"]}>
+      <ClientDashboard />
+    </RouteGuard>
+  );
+}
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.replace("/auth?mode=login");
-  }, [authLoading, isAuthenticated, router]);
+function ClientDashboard() {
+  const { user } = useAuth();
+  const { data } = useMyBookings();
 
   const bookings = data?.items ?? [];
   const upcoming = bookings
