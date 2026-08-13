@@ -11,6 +11,7 @@ import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { SubmitVerificationDto } from './dto/submit-verification.dto';
 import { ReviewVerificationDto } from './dto/review-verification.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 
 // Minimal shape of a multer-uploaded file (avoids needing @types/multer).
 export interface UploadedFileLike {
@@ -28,6 +29,7 @@ export class VerificationsService {
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
   ) {
     this.bucket = this.config.get<string>('storage.bucket') || 'zenex-uploads';
   }
@@ -163,6 +165,29 @@ export class VerificationsService {
           : `Verification ${dto.status.toLowerCase()}`,
         body: dto.note,
       });
+
+      // Email as well as the in-app notification. A provider who has been
+      // rejected may not log in again unprompted, and the rejection reason is
+      // the only thing that tells them how to fix it — an in-app bell they
+      // never see is not good enough for a decision that blocks their income.
+      const providerUser = await this.prisma.user.findUnique({
+        where: { id: providerUserId },
+        select: { email: true, firstName: true },
+      });
+      if (providerUser?.email) {
+        if (approved) {
+          await this.mail.kycApproved({
+            to: providerUser.email,
+            providerName: providerUser.firstName,
+          });
+        } else if (dto.status === VerificationStatus.REJECTED) {
+          await this.mail.kycRejected({
+            to: providerUser.email,
+            providerName: providerUser.firstName,
+            reason: dto.note,
+          });
+        }
+      }
     }
 
     return result;

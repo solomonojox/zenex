@@ -29,7 +29,10 @@ export class RemindersService {
 
     const expired = await this.prisma.document.findMany({
       where: { type: 'Insurance', expiresAt: { lt: now } },
-      select: { request: { select: { providerId: true } } },
+      select: {
+        expiresAt: true,
+        request: { select: { providerId: true } },
+      },
     });
 
     const providerIds = [
@@ -37,10 +40,19 @@ export class RemindersService {
     ];
     if (providerIds.length === 0) return;
 
+    // Latest expiry per provider, for the email.
+    const expiryFor = new Map<string, Date>();
+    for (const d of expired) {
+      const pid = d.request.providerId;
+      if (!pid || !d.expiresAt) continue;
+      const seen = expiryFor.get(pid);
+      if (!seen || d.expiresAt > seen) expiryFor.set(pid, d.expiresAt);
+    }
+
     // Only touch providers still marked verified.
     const affected = await this.prisma.providerProfile.findMany({
       where: { id: { in: providerIds }, verified: true },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, user: { select: { email: true, firstName: true } } },
     });
     if (affected.length === 0) return;
 
@@ -61,6 +73,73 @@ export class RemindersService {
         body: 'Upload current coverage in the Verification tab to restore your badge.',
       })),
     );
+
+    // Losing the verified badge quietly costs a provider bookings they will
+    // never know they missed, so this one goes to their inbox as well.
+    for (const p of affected) {
+      if (!p.user?.email) continue;
+      await this.mail.insuranceExpiring({
+        to: p.user.email,
+        providerName: p.user.firstName,
+        expiresOn: expiryFor.get(p.id) ?? now,
+        daysLeft: 0,
+      });
+    }
+  }
+
+  /**
+   * Warn before the badge is lost, not after.
+   *
+   * Fires at 14, 7, 3 and 1 days out rather than every day inside the window —
+   * there is no "already warned" column on Document, and emailing someone
+   * daily for a fortnight is how you get marked as spam. Checking exact day
+   * counts keeps it to four messages with no schema change; the trade-off is
+   * that a missed cron run skips that milestone rather than catching up.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async warnUpcomingDocumentExpiry() {
+    const MILESTONES = [14, 7, 3, 1];
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 15 * 86_400_000);
+
+    const upcoming = await this.prisma.document.findMany({
+      where: { type: 'Insurance', expiresAt: { gte: now, lte: horizon } },
+      select: {
+        expiresAt: true,
+        request: {
+          select: {
+            provider: {
+              select: {
+                verified: true,
+                user: { select: { email: true, firstName: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let sent = 0;
+    for (const d of upcoming) {
+      const provider = d.request?.provider;
+      // Unverified providers have nothing to lose yet — no need to nag them.
+      if (!provider?.verified || !provider.user?.email || !d.expiresAt) continue;
+
+      const daysLeft = Math.ceil(
+        (d.expiresAt.getTime() - now.getTime()) / 86_400_000,
+      );
+      if (!MILESTONES.includes(daysLeft)) continue;
+
+      await this.mail.insuranceExpiring({
+        to: provider.user.email,
+        providerName: provider.user.firstName,
+        expiresOn: d.expiresAt,
+        daysLeft,
+      });
+      sent += 1;
+    }
+
+    if (sent) this.logger.log(`Sent ${sent} insurance expiry warning(s)`);
   }
 
   @Cron(CronExpression.EVERY_HOUR)

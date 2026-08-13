@@ -39,7 +39,14 @@ export class MailService {
   private readonly appUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.token = this.config.get<string>('mail.token') || '';
+    // Zoho's setup page shows the token as the full header value —
+    // "Zoho-enczapikey wSsVR6…" — and it is routinely copied that way. The
+    // prefix is added below when the request is built, so strip it here rather
+    // than sending it twice and failing auth with a token that is actually
+    // correct.
+    this.token = (this.config.get<string>('mail.token') || '')
+      .replace(/^\s*Zoho-enczapikey\s+/i, '')
+      .trim();
     this.apiUrl =
       this.config.get<string>('mail.apiUrl') ||
       'https://api.zeptomail.com/v1.1/email';

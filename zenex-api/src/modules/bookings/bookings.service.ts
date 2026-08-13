@@ -349,14 +349,24 @@ export class BookingsService {
       where: {
         id: { in: [clientUserId, providerUserId].filter((id): id is string => !!id) },
       },
-      select: { email: true, firstName: true },
+      select: { id: true, email: true, firstName: true },
     });
+    // The refund figure only belongs in the client's copy — the provider has
+    // no business seeing what was returned, and "a refund is on its way" would
+    // read as though they were being paid.
+    // refundBooking() returns null when the booking was never paid.
+    const refundAmount = refund?.refundAmount;
+
     for (const r of recipients) {
+      const isClient = r.id === clientUserId;
       await this.mail.bookingCancelled({
         to: r.email,
         name: r.firstName,
         reference: updated.reference,
         serviceName: svcName,
+        scheduledFor: updated.scheduledFor,
+        cancelledBy: r.id === user.id ? undefined : 'the other party',
+        ...(isClient && refundAmount !== undefined ? { refundAmount } : {}),
       });
     }
 
@@ -429,6 +439,28 @@ export class BookingsService {
           title: `Booking ${updated.reference} ${suffix}`,
           body: updated.service?.name ?? 'Cleaning',
         });
+      }
+
+      // Ask for the review by email once the job is done. Reviews are the
+      // whole trust engine of a marketplace — an in-app prompt only reaches
+      // clients who happen to log back in, which most won't until they next
+      // need a clean.
+      if (status === BookingStatus.COMPLETED) {
+        const clientUser = await this.prisma.user.findUnique({
+          where: { id: clientUserId },
+          select: { email: true, firstName: true },
+        });
+        const providerUser = updated.provider?.user;
+        if (clientUser?.email) {
+          await this.mail.reviewRequest({
+            to: clientUser.email,
+            clientName: clientUser.firstName,
+            providerName: providerUser
+              ? `${providerUser.firstName} ${providerUser.lastName}`.trim()
+              : 'your cleaner',
+            reference: updated.reference,
+          });
+        }
       }
     }
 

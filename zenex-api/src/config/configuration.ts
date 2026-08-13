@@ -44,7 +44,16 @@ export default () => ({
   mail: {
     // ZeptoMail (Zoho) send-mail token, from Agents > SMTP/API > Send Mail Token.
     // Absent means log mode: emails are written to the server log, not sent.
-    token: process.env.ZEPTOMAIL_TOKEN || '',
+    //
+    // ZEPTO_API_TOKEN / ZEPTO_API_KEY are accepted as aliases because that is
+    // how Zoho's own setup screen labels them, and having the deploy fail over
+    // a variable name is a waste of everyone's afternoon. MailService strips a
+    // leading "Zoho-enczapikey " if the value was copied with the prefix.
+    token:
+      process.env.ZEPTOMAIL_TOKEN ||
+      process.env.ZEPTO_API_TOKEN ||
+      process.env.ZEPTO_API_KEY ||
+      '',
     // Regional endpoint. Use api.zeptomail.eu or api.zeptomail.in if the Zoho
     // account was created in the EU or India data centre — sending to the wrong
     // region fails authentication with a token that is otherwise valid.
@@ -52,7 +61,7 @@ export default () => ({
       process.env.ZEPTOMAIL_API_URL || 'https://api.zeptomail.com/v1.1/email',
     // Either "no-reply@zenex.ca" or "Zenex <no-reply@zenex.ca>". The domain
     // must be verified in the ZeptoMail agent or every send is rejected.
-    from: process.env.MAIL_FROM || '',
+    from: process.env.MAIL_FROM || process.env.ZEPTO_SENDER_EMAIL || '',
     fromName: process.env.MAIL_FROM_NAME || 'Zenex',
     // Where replies land. Worth setting: no-reply addresses that bounce are a
     // deliverability signal, and clients do reply to booking emails.

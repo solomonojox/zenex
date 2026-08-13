@@ -87,6 +87,19 @@ export class AuthService {
       },
     });
 
+    // Welcome email. MailService swallows its own failures, so a mail outage
+    // can never cost someone their registration — but providers in particular
+    // need this one: it is where they learn that verification and working
+    // hours are what stand between them and their first booking.
+    if (user.role === Role.PROVIDER) {
+      await this.mail.welcomeProvider({
+        to: user.email,
+        name: user.firstName,
+      });
+    } else if (user.role === Role.CLIENT) {
+      await this.mail.welcomeClient({ to: user.email, name: user.firstName });
+    }
+
     return this.issueTokens(user.id, user.email, user.role, user.tenantId);
   }
 

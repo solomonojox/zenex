@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { ApiUrl } from "@/config/apiConfig";
+import { resolveTenant } from "@/lib/utils/tenant";
 
 export const TOKEN_KEY = "zenexUserToken";
 export const REFRESH_KEY = "zenexRefreshToken";
@@ -22,10 +23,14 @@ axiosInstance.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Extract subdomain (tenant)
-      const host = window.location.hostname;
-      const parts = host.split(".");
-      const tenant = parts.length > 1 ? parts[0] : null;
+      // Only send x-Tenant when the host genuinely identifies one. Sending a
+      // wrong tenant is far worse than sending none: the API scopes every
+      // query by it, so a bogus value returns empty lists rather than an
+      // error, and the site looks like it has no data at all.
+      const tenant = resolveTenant(
+        window.location.hostname,
+        process.env.NEXT_PUBLIC_TENANT,
+      );
       if (tenant) {
         config.headers["x-Tenant"] = tenant;
       }

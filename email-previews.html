@@ -1,0 +1,1570 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Zenex email templates</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;background:#f1f5f9}
+.top{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 22px}
+.top h1{margin:0;font-size:17px;color:#0d9488}
+.top p{margin:4px 0 0;color:#64748b;font-size:13px}
+.wrap{display:flex;gap:18px;padding:18px;align-items:flex-start}
+.nav{width:290px;flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;position:sticky;top:18px}
+.nav-item{display:grid;grid-template-columns:10px 1fr;gap:4px 9px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #f1f5f9;padding:10px 13px;cursor:pointer;font:inherit}
+.nav-item:hover{background:#f8fafc}
+.nav-item.active{background:#f0fdfa}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:6px}
+.dot.wired{background:#10b981}.dot.built{background:#cbd5e1}
+.nav-label{font-weight:600;font-size:13px}
+.nav-trigger{grid-column:2;font-size:11px;color:#94a3b8}
+.main{flex:1;min-width:0}
+.pane{display:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px}
+.pane.active{display:block}
+.pane-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.pane h2{margin:0;font-size:17px}
+.subject{margin:6px 0 0;color:#475569;font-size:13px}
+.trigger{margin:8px 0 0;color:#64748b;font-size:12px}
+.badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.badge.wired{background:#d1fae5;color:#065f46}
+.badge.built{background:#f1f5f9;color:#64748b}
+.tabs{display:flex;gap:6px;margin:16px 0 10px}
+.tab{border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:6px 13px;font:600 12px inherit;cursor:pointer;color:#64748b}
+.tab.active{background:#0d9488;border-color:#0d9488;color:#fff}
+.view{display:none}.view.active{display:block}
+iframe{width:100%;height:620px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafb}
+pre{white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;font:12.5px/1.65 ui-monospace,Menlo,monospace;margin:0}
+</style></head><body>
+<div class="top">
+  <h1>Zenex — transactional email templates</h1>
+  <p>22 templates · <strong>12 firing</strong> · 10 built but not yet wired. Green dot = live.</p>
+</div>
+<div class="wrap"><nav class="nav">
+  <button class="nav-item active" data-target="welcomeClient">
+    <span class="dot wired"></span>
+    <span class="nav-label">Welcome — client</span>
+    <span class="nav-trigger">Registration (role CLIENT)</span>
+  </button>
+  <button class="nav-item" data-target="welcomeProvider">
+    <span class="dot wired"></span>
+    <span class="nav-label">Welcome — provider</span>
+    <span class="nav-trigger">Registration (role PROVIDER)</span>
+  </button>
+  <button class="nav-item" data-target="kycApproved">
+    <span class="dot wired"></span>
+    <span class="nav-label">KYC approved</span>
+    <span class="nav-trigger">Admin approves verification</span>
+  </button>
+  <button class="nav-item" data-target="kycRejected">
+    <span class="dot wired"></span>
+    <span class="nav-label">KYC rejected</span>
+    <span class="nav-trigger">Admin rejects verification</span>
+  </button>
+  <button class="nav-item" data-target="reviewRequest">
+    <span class="dot wired"></span>
+    <span class="nav-label">Review request</span>
+    <span class="nav-trigger">Booking set to COMPLETED</span>
+  </button>
+  <button class="nav-item" data-target="insuranceExpiring">
+    <span class="dot wired"></span>
+    <span class="nav-label">Insurance expiring</span>
+    <span class="nav-trigger">Cron at 14/7/3/1 days out</span>
+  </button>
+  <button class="nav-item" data-target="insuranceExpired">
+    <span class="dot wired"></span>
+    <span class="nav-label">Insurance expired</span>
+    <span class="nav-trigger">Cron on de-verification</span>
+  </button>
+  <button class="nav-item" data-target="bookingConfirmed">
+    <span class="dot wired"></span>
+    <span class="nav-label">Booking confirmed</span>
+    <span class="nav-trigger">Booking created</span>
+  </button>
+  <button class="nav-item" data-target="newBookingForProvider">
+    <span class="dot wired"></span>
+    <span class="nav-label">New job — provider</span>
+    <span class="nav-trigger">Booking created</span>
+  </button>
+  <button class="nav-item" data-target="bookingReminder">
+    <span class="dot wired"></span>
+    <span class="nav-label">24h reminder</span>
+    <span class="nav-trigger">Hourly cron, 24h before</span>
+  </button>
+  <button class="nav-item" data-target="bookingCancelled">
+    <span class="dot wired"></span>
+    <span class="nav-label">Booking cancelled</span>
+    <span class="nav-trigger">Either party cancels</span>
+  </button>
+  <button class="nav-item" data-target="passwordReset">
+    <span class="dot wired"></span>
+    <span class="nav-label">Password reset</span>
+    <span class="nav-trigger">Forgot-password request</span>
+  </button>
+  <button class="nav-item" data-target="paymentReceipt">
+    <span class="dot built"></span>
+    <span class="nav-label">Payment receipt</span>
+    <span class="nav-trigger">Needs payments.service hook</span>
+  </button>
+  <button class="nav-item" data-target="refundIssued">
+    <span class="dot built"></span>
+    <span class="nav-label">Refund issued</span>
+    <span class="nav-trigger">Needs payments.service hook</span>
+  </button>
+  <button class="nav-item" data-target="payoutSent">
+    <span class="dot built"></span>
+    <span class="nav-label">Payout sent</span>
+    <span class="nav-trigger">Needs payments.service hook</span>
+  </button>
+  <button class="nav-item" data-target="stripeOnboardingReminder">
+    <span class="dot built"></span>
+    <span class="nav-label">Connect bank account</span>
+    <span class="nav-trigger">Needs a cron</span>
+  </button>
+  <button class="nav-item" data-target="subscriptionStarted">
+    <span class="dot built"></span>
+    <span class="nav-label">Subscription active</span>
+    <span class="nav-trigger">Blocked: Subscription has no user relation</span>
+  </button>
+  <button class="nav-item" data-target="disputeOpened">
+    <span class="dot built"></span>
+    <span class="nav-label">Dispute opened</span>
+    <span class="nav-trigger">Blocked: Dispute has no user relation</span>
+  </button>
+  <button class="nav-item" data-target="disputeResolved">
+    <span class="dot built"></span>
+    <span class="nav-label">Dispute resolved</span>
+    <span class="nav-trigger">Blocked: Dispute has no user relation</span>
+  </button>
+  <button class="nav-item" data-target="bookingRescheduled">
+    <span class="dot built"></span>
+    <span class="nav-label">Booking moved</span>
+    <span class="nav-trigger">No reschedule endpoint yet</span>
+  </button>
+  <button class="nav-item" data-target="newMessage">
+    <span class="dot built"></span>
+    <span class="nav-label">New message</span>
+    <span class="nav-trigger">Deliberately held — needs an offline rule</span>
+  </button>
+  <button class="nav-item" data-target="verifyEmail">
+    <span class="dot built"></span>
+    <span class="nav-label">Confirm email</span>
+    <span class="nav-trigger">Blocked: no emailVerified column</span>
+  </button></nav><div class="main">
+  <section class="pane active" id="welcomeClient">
+    <header class="pane-head">
+      <div>
+        <h2>Welcome — client</h2>
+        <p class="subject"><strong>Subject:</strong> Welcome to Zenex</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Registration (role CLIENT)</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Your account is ready — find a cleaner near you.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Welcome, Alexandra&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Your Zenex account is ready. You can browse vetted cleaners in your area, see real prices up front, and book in a couple of minutes.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Every cleaner on Zenex is identity-checked before they can take work, and payment is only released after the job is done.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/search&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Find a cleaner&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Welcome, Alexandra
+
+Your Zenex account is ready. You can browse vetted cleaners in your area, see real prices up front, and book in a couple of minutes.
+Every cleaner on Zenex is identity-checked before they can take work, and payment is only released after the job is done.
+
+Find a cleaner: https://zenex-app.vercel.app/search
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="welcomeProvider">
+    <header class="pane-head">
+      <div>
+        <h2>Welcome — provider</h2>
+        <p class="subject"><strong>Subject:</strong> Welcome to Zenex — next steps</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Registration (role PROVIDER)</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Two things to finish before you can take bookings.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Welcome aboard, Priya&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Your provider account is set up. Before clients can book you, there are two things to finish:&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;1. Upload your ID and insurance so we can verify you. Verified cleaners appear first in search and get noticeably more bookings.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;2. Set your working hours. We have started you on Monday to Saturday, 8am to 6pm — adjust it to match reality, because clients can only book the times you publish.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/provider&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Finish setting up&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Welcome aboard, Priya
+
+Your provider account is set up. Before clients can book you, there are two things to finish:
+1. Upload your ID and insurance so we can verify you. Verified cleaners appear first in search and get noticeably more bookings.
+2. Set your working hours. We have started you on Monday to Saturday, 8am to 6pm — adjust it to match reality, because clients can only book the times you publish.
+
+Finish setting up: https://zenex-app.vercel.app/provider
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="kycApproved">
+    <header class="pane-head">
+      <div>
+        <h2>KYC approved</h2>
+        <p class="subject"><strong>Subject:</strong> You&#39;re verified on Zenex</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Admin approves verification</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Your verified badge is live.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;You&amp;#39;re verified, Amara&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Your documents checked out. Your profile now carries the verified badge, and you will appear ahead of unverified cleaners in search and instant matching.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Keep your insurance current — we check expiry dates automatically, and the badge is removed if cover lapses.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/provider&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View your profile&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>You&#39;re verified, Amara
+
+Your documents checked out. Your profile now carries the verified badge, and you will appear ahead of unverified cleaners in search and instant matching.
+Keep your insurance current — we check expiry dates automatically, and the badge is removed if cover lapses.
+
+View your profile: https://zenex-app.vercel.app/provider
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="kycRejected">
+    <header class="pane-head">
+      <div>
+        <h2>KYC rejected</h2>
+        <p class="subject"><strong>Subject:</strong> We need another look at your documents</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Admin rejects verification</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Something needs correcting before we can verify you.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;We could not verify your documents&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Daniel, we were not able to approve your verification this time.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;What needs fixing: The insurance certificate was cropped — we could not read the expiry date.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;This is usually something small — a blurry photo, a cropped edge, or an expiry date we could not read. You can upload replacements straight away and we will look again.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/provider&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Upload new documents&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>We could not verify your documents
+
+Hi Daniel, we were not able to approve your verification this time.
+What needs fixing: The insurance certificate was cropped — we could not read the expiry date.
+This is usually something small — a blurry photo, a cropped edge, or an expiry date we could not read. You can upload replacements straight away and we will look again.
+
+Upload new documents: https://zenex-app.vercel.app/provider
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="reviewRequest">
+    <header class="pane-head">
+      <div>
+        <h2>Review request</h2>
+        <p class="subject"><strong>Subject:</strong> How did it go with Priya Sharma?</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Booking set to COMPLETED</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;A quick rating helps other clients choose.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;How did it go, Alexandra?&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Priya Sharma has marked your clean as complete. A rating takes about twenty seconds and it is the main thing other clients use to choose.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;It also matters a great deal to the cleaner — reviews are how good people on Zenex get more work.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Leave a review&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>How did it go, Alexandra?
+
+Priya Sharma has marked your clean as complete. A rating takes about twenty seconds and it is the main thing other clients use to choose.
+It also matters a great deal to the cleaner — reviews are how good people on Zenex get more work.
+
+Reference: BK-2841
+
+Leave a review: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="insuranceExpiring">
+    <header class="pane-head">
+      <div>
+        <h2>Insurance expiring</h2>
+        <p class="subject"><strong>Subject:</strong> Your insurance expires in 14 days</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Cron at 14/7/3/1 days out</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Upload renewed cover to keep your verified badge.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Your insurance is about to expire&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Luc, the insurance on file expires on Thursday, August 20, 2026 at 2:00 p.m..&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;When it lapses we remove the verified badge automatically, which means fewer bookings. Upload the renewed certificate before then and nothing changes.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Expiry date&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/provider&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Upload insurance&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Your insurance is about to expire
+
+Hi Luc, the insurance on file expires on Thursday, August 20, 2026 at 2:00 p.m..
+When it lapses we remove the verified badge automatically, which means fewer bookings. Upload the renewed certificate before then and nothing changes.
+
+Expiry date: Thursday, August 20, 2026 at 2:00 p.m.
+
+Upload insurance: https://zenex-app.vercel.app/provider
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="insuranceExpired">
+    <header class="pane-head">
+      <div>
+        <h2>Insurance expired</h2>
+        <p class="subject"><strong>Subject:</strong> Your insurance has expired</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Cron on de-verification</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Upload renewed cover to keep your verified badge.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Your verified badge has been removed&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Luc, the insurance on file expired on Thursday, August 20, 2026 at 2:00 p.m., so your verified badge has been removed for now.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Upload a current certificate and we will restore it as soon as it is reviewed.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Expiry date&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/provider&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Upload insurance&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Your verified badge has been removed
+
+Hi Luc, the insurance on file expired on Thursday, August 20, 2026 at 2:00 p.m., so your verified badge has been removed for now.
+Upload a current certificate and we will restore it as soon as it is reviewed.
+
+Expiry date: Thursday, August 20, 2026 at 2:00 p.m.
+
+Upload insurance: https://zenex-app.vercel.app/provider
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="bookingConfirmed">
+    <header class="pane-head">
+      <div>
+        <h2>Booking confirmed</h2>
+        <p class="subject"><strong>Subject:</strong> Booking confirmed — BK-2841</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Booking created</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Deep Clean with Priya Sharma, Thursday, August 20, 2026 at 2:00 p.m.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;You&amp;#39;re booked, Alexandra&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Priya Sharma will see you at the time below.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Service&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Deep Clean&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Cleaner&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Priya Sharma&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;When&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Address&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;12 King St W, Toronto&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Total&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$214.70 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View booking&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>You&#39;re booked, Alexandra
+
+Priya Sharma will see you at the time below.
+
+Service: Deep Clean
+Cleaner: Priya Sharma
+When: Thursday, August 20, 2026 at 2:00 p.m.
+Address: 12 King St W, Toronto
+Reference: BK-2841
+Total: $214.70 CAD
+
+View booking: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="newBookingForProvider">
+    <header class="pane-head">
+      <div>
+        <h2>New job — provider</h2>
+        <p class="subject"><strong>Subject:</strong> New booking — BK-2841</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Booking created</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Deep Clean for Alexandra, Thursday, August 20, 2026 at 2:00 p.m.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;New job booked, Priya&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Service&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Deep Clean&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Client&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Alexandra&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;When&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Address&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;12 King St W, Toronto&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Your payout&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$161.50 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/provider&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Open dashboard&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>New job booked, Priya
+
+
+Service: Deep Clean
+Client: Alexandra
+When: Thursday, August 20, 2026 at 2:00 p.m.
+Address: 12 King St W, Toronto
+Reference: BK-2841
+Your payout: $161.50 CAD
+
+Open dashboard: https://zenex-app.vercel.app/provider
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="bookingReminder">
+    <header class="pane-head">
+      <div>
+        <h2>24h reminder</h2>
+        <p class="subject"><strong>Subject:</strong> Reminder: your clean is tomorrow (BK-2841)</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Hourly cron, 24h before</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Deep Clean with Priya Sharma tomorrow.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;See you tomorrow, Alexandra&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Service&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Deep Clean&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;With&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Priya Sharma&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;When&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Address&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;12 King St W, Toronto&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Manage booking&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;line-height:1.6;color:#94a3b8;padding-top:18px&quot;&gt;Need to change something? Cancellations made more than 24 hours ahead are refunded in full.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>See you tomorrow, Alexandra
+
+
+Service: Deep Clean
+With: Priya Sharma
+When: Thursday, August 20, 2026 at 2:00 p.m.
+Address: 12 King St W, Toronto
+Reference: BK-2841
+
+Manage booking: https://zenex-app.vercel.app/client
+
+Need to change something? Cancellations made more than 24 hours ahead are refunded in full.
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="bookingCancelled">
+    <header class="pane-head">
+      <div>
+        <h2>Booking cancelled</h2>
+        <p class="subject"><strong>Subject:</strong> Booking cancelled — BK-2841</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Either party cancels</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Deep Clean has been cancelled.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Booking cancelled&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Alexandra, booking BK-2841 has been cancelled by the other party.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;A refund of $107.35 CAD is on its way back to your original payment method. Card refunds usually settle within 5 to 10 business days.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Service&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Deep Clean&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Was booked for&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Refund&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$107.35 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/search&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Book again&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Booking cancelled
+
+Hi Alexandra, booking BK-2841 has been cancelled by the other party.
+A refund of $107.35 CAD is on its way back to your original payment method. Card refunds usually settle within 5 to 10 business days.
+
+Service: Deep Clean
+Was booked for: Thursday, August 20, 2026 at 2:00 p.m.
+Reference: BK-2841
+Refund: $107.35 CAD
+
+Book again: https://zenex-app.vercel.app/search
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="passwordReset">
+    <header class="pane-head">
+      <div>
+        <h2>Password reset</h2>
+        <p class="subject"><strong>Subject:</strong> Reset your Zenex password</p>
+      </div>
+      <span class="badge wired">Firing</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Forgot-password request</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;A link to choose a new password.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Reset your password&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Mei, we received a request to reset your Zenex password.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/auth/reset?token=a1b2c3&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Choose a new password&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;line-height:1.6;color:#94a3b8;padding-top:18px&quot;&gt;This link expires in 1 hour. If you didn&amp;#39;t ask for this, you can safely ignore this email — your password will not change.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Reset your password
+
+Hi Mei, we received a request to reset your Zenex password.
+
+Choose a new password: https://zenex-app.vercel.app/auth/reset?token=a1b2c3
+
+This link expires in 1 hour. If you didn&#39;t ask for this, you can safely ignore this email — your password will not change.
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="paymentReceipt">
+    <header class="pane-head">
+      <div>
+        <h2>Payment receipt</h2>
+        <p class="subject"><strong>Subject:</strong> Receipt for BK-2841</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Needs payments.service hook</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;$214.70 CAD — thank you.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Your receipt&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Thanks Alexandra. Here is the breakdown for your booking. Keep this for your records.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Service&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Deep Clean&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;When&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Subtotal&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$190.00 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;HST (13%)&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$24.70 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Total paid&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$214.70 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View bookings&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Your receipt
+
+Thanks Alexandra. Here is the breakdown for your booking. Keep this for your records.
+
+Service: Deep Clean
+When: Thursday, August 20, 2026 at 2:00 p.m.
+Reference: BK-2841
+Subtotal: $190.00 CAD
+HST (13%): $24.70 CAD
+Total paid: $214.70 CAD
+
+View bookings: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="refundIssued">
+    <header class="pane-head">
+      <div>
+        <h2>Refund issued</h2>
+        <p class="subject"><strong>Subject:</strong> Refund issued — BK-2841</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Needs payments.service hook</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;$107.35 CAD is on its way back to you.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Refund on its way&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Alexandra, we have refunded $107.35 CAD for booking BK-2841.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Reason: Cancelled within 24 hours of the booking&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Refunds return to your original payment method and usually settle within 5 to 10 business days, depending on your bank.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Refund amount&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$107.35 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View bookings&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Refund on its way
+
+Hi Alexandra, we have refunded $107.35 CAD for booking BK-2841.
+Reason: Cancelled within 24 hours of the booking
+Refunds return to your original payment method and usually settle within 5 to 10 business days, depending on your bank.
+
+Reference: BK-2841
+Refund amount: $107.35 CAD
+
+View bookings: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="payoutSent">
+    <header class="pane-head">
+      <div>
+        <h2>Payout sent</h2>
+        <p class="subject"><strong>Subject:</strong> Payout sent — $512.40 CAD</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Needs payments.service hook</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;$512.40 CAD is on its way to your bank.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Payout on its way, Priya&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;We have sent $512.40 CAD to your connected bank account for 4 completed jobs.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Most payouts arrive within 2 to 3 business days.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Amount&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$512.40 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Jobs&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;4&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/wallet&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View earnings&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Payout on its way, Priya
+
+We have sent $512.40 CAD to your connected bank account for 4 completed jobs.
+Most payouts arrive within 2 to 3 business days.
+
+Amount: $512.40 CAD
+Jobs: 4
+
+View earnings: https://zenex-app.vercel.app/wallet
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="stripeOnboardingReminder">
+    <header class="pane-head">
+      <div>
+        <h2>Connect bank account</h2>
+        <p class="subject"><strong>Subject:</strong> Add your bank details to get paid</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Needs a cron</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Your earnings are waiting on payout setup.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;One step left, Daniel&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;You have $220.00 CAD in completed work waiting, but we cannot pay it out until your bank details are connected.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;We use Stripe to handle payouts, so your banking information never touches Zenex servers.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/wallet&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Connect bank account&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>One step left, Daniel
+
+You have $220.00 CAD in completed work waiting, but we cannot pay it out until your bank details are connected.
+We use Stripe to handle payouts, so your banking information never touches Zenex servers.
+
+Connect bank account: https://zenex-app.vercel.app/wallet
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="subscriptionStarted">
+    <header class="pane-head">
+      <div>
+        <h2>Subscription active</h2>
+        <p class="subject"><strong>Subject:</strong> Your Regular plan is active</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Blocked: Subscription has no user relation</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Bi-weekly cleans, $219.00 CAD per month.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Regular plan active&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Alexandra, your subscription is live. You will be billed $219.00 CAD per month and can cancel any time from your dashboard.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Plan&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Regular&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Frequency&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Bi-weekly&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Price&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$219.00 CAD / month&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Manage subscription&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Regular plan active
+
+Hi Alexandra, your subscription is live. You will be billed $219.00 CAD per month and can cancel any time from your dashboard.
+
+Plan: Regular
+Frequency: Bi-weekly
+Price: $219.00 CAD / month
+
+Manage subscription: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="disputeOpened">
+    <header class="pane-head">
+      <div>
+        <h2>Dispute opened</h2>
+        <p class="subject"><strong>Subject:</strong> We&#39;re looking into booking BK-2841</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Blocked: Dispute has no user relation</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Our team has picked this up.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Your issue has been logged&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Alexandra, thanks for flagging a problem with booking BK-2841. Our team has it and will come back to you, normally within two business days.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Any payout on this booking is held until it is settled.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Issue&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Cleaner did not arrive&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View booking&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Your issue has been logged
+
+Hi Alexandra, thanks for flagging a problem with booking BK-2841. Our team has it and will come back to you, normally within two business days.
+Any payout on this booking is held until it is settled.
+
+Reference: BK-2841
+Issue: Cleaner did not arrive
+
+View booking: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="disputeResolved">
+    <header class="pane-head">
+      <div>
+        <h2>Dispute resolved</h2>
+        <p class="subject"><strong>Subject:</strong> Resolved — booking BK-2841</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Blocked: Dispute has no user relation</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Here is the outcome.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Your issue has been resolved&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Alexandra, we have finished reviewing booking BK-2841.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Outcome: Full refund issued&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;A refund of $214.70 CAD has been issued and should reach you within 5 to 10 business days.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Refund&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;$214.70 CAD&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View booking&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Your issue has been resolved
+
+Hi Alexandra, we have finished reviewing booking BK-2841.
+Outcome: Full refund issued
+A refund of $214.70 CAD has been issued and should reach you within 5 to 10 business days.
+
+Reference: BK-2841
+Refund: $214.70 CAD
+
+View booking: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="bookingRescheduled">
+    <header class="pane-head">
+      <div>
+        <h2>Booking moved</h2>
+        <p class="subject"><strong>Subject:</strong> Booking moved — BK-2841</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> No reschedule endpoint yet</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Now Saturday, August 22, 2026 at 4:00 p.m..&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Your booking has moved&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Alexandra, Deep Clean has been rescheduled.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding:8px 0&quot;&gt;
+                 &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;
+                        style=&quot;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0&quot;&gt;
+                   
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Was&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Thursday, August 20, 2026 at 2:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Now&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;Saturday, August 22, 2026 at 4:00 p.m.&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#94a3b8&quot;&gt;Reference&lt;/td&gt;
+        &lt;td style=&quot;padding:6px 0;font-size:13px;color:#0f172a;font-weight:600;text-align:right&quot;&gt;BK-2841&lt;/td&gt;
+      &lt;/tr&gt;
+                 &lt;/table&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/client&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;View booking&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Your booking has moved
+
+Hi Alexandra, Deep Clean has been rescheduled.
+
+Was: Thursday, August 20, 2026 at 2:00 p.m.
+Now: Saturday, August 22, 2026 at 4:00 p.m.
+Reference: BK-2841
+
+View booking: https://zenex-app.vercel.app/client
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="newMessage">
+    <header class="pane-head">
+      <div>
+        <h2>New message</h2>
+        <p class="subject"><strong>Subject:</strong> New message from Priya</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Deliberately held — needs an offline rule</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;Running about 10 minutes late, sorry!&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Priya sent you a message&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;&amp;quot;Running about 10 minutes late, sorry!&amp;quot;&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/messages&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Reply&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;line-height:1.6;color:#94a3b8;padding-top:18px&quot;&gt;You are getting this because you have an active conversation on Zenex.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Priya sent you a message
+
+&quot;Running about 10 minutes late, sorry!&quot;
+
+Reply: https://zenex-app.vercel.app/messages
+
+You are getting this because you have an active conversation on Zenex.
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section>
+  <section class="pane" id="verifyEmail">
+    <header class="pane-head">
+      <div>
+        <h2>Confirm email</h2>
+        <p class="subject"><strong>Subject:</strong> Confirm your email address</p>
+      </div>
+      <span class="badge built">Built, not wired</span>
+    </header>
+    <p class="trigger"><strong>Trigger:</strong> Blocked: no emailVerified column</p>
+    <div class="tabs">
+      <button class="tab active" data-view="html">HTML</button>
+      <button class="tab" data-view="text">Plain text</button>
+    </div>
+    <div class="view html active">
+      <iframe sandbox="" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;body style=&quot;margin:0;padding:0;background:#f8fafb&quot;&gt;
+  &lt;div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0&quot;&gt;One click to confirm your address.&lt;/div&gt;
+  &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background:#f8fafb;padding:24px 12px&quot;&gt;
+    &lt;tr&gt;&lt;td align=&quot;center&quot;&gt;
+      &lt;table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;max-width:520px;background:#ffffff;border-radius:14px;padding:28px;font-family:-apple-system,&#39;Segoe UI&#39;,Roboto,Helvetica,Arial,sans-serif;color:#0f172a&quot;&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:800;color:#0d9488;padding-bottom:18px&quot;&gt;Zenex&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:20px;font-weight:700;line-height:1.3;padding-bottom:10px&quot;&gt;Confirm your email&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:14px;line-height:1.65;color:#475569;padding-bottom:10px&quot;&gt;Hi Owen, please confirm this address so we can send you booking confirmations and receipts.&lt;/td&gt;&lt;/tr&gt;
+        
+        &lt;tr&gt;&lt;td style=&quot;padding-top:20px&quot;&gt;
+                 &lt;a href=&quot;https://zenex-app.vercel.app/auth/verify?token=xyz789&quot;
+                    style=&quot;display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px&quot;&gt;Confirm email&lt;/a&gt;
+               &lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;line-height:1.6;color:#94a3b8;padding-top:18px&quot;&gt;This link expires in 24 hours. If you didn&amp;#39;t create a Zenex account, you can ignore this email.&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style=&quot;font-size:12px;color:#94a3b8;padding-top:24px;border-top:1px solid #e2e8f0;margin-top:20px&quot;&gt;
+          Zenex — Canada&#39;s trusted cleaning marketplace.&lt;br/&gt;
+          This is a service message about your account or a booking.
+        &lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    </div>
+    <div class="view text"><pre>Confirm your email
+
+Hi Owen, please confirm this address so we can send you booking confirmations and receipts.
+
+Confirm email: https://zenex-app.vercel.app/auth/verify?token=xyz789
+
+This link expires in 24 hours. If you didn&#39;t create a Zenex account, you can ignore this email.
+
+—
+Zenex — Canada&#39;s trusted cleaning marketplace.</pre></div>
+  </section></div></div>
+<script>
+document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById(b.dataset.target).classList.add('active');
+});
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  const pane = t.closest('.pane');
+  pane.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  pane.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  pane.querySelector('.view.' + t.dataset.view).classList.add('active');
+});
+</script>
+</body></html>
