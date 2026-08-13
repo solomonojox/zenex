@@ -102,6 +102,64 @@ export class MailService {
     };
   }
 
+  /**
+   * Send a test message and hand back exactly what the provider said.
+   *
+   * "No email arrived" has half a dozen possible causes at the provider's end
+   * — unverified sender domain, wrong regional endpoint, an unapproved
+   * ZeptoMail agent, a bad token — and every one of them looks identical from
+   * the app, which logs the rejection and carries on. This surfaces the raw
+   * response so the actual reason is visible without trawling server logs.
+   */
+  async sendTest(to: string) {
+    if (!this.enabled) {
+      return {
+        sent: false,
+        mode: 'log-mode' as const,
+        reason:
+          'Mail is in log-mode — nothing is sent. See the mail block on /api/health.',
+        status: this.status,
+      };
+    }
+
+    try {
+      const res = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Zoho-enczapikey ${this.token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          from: { address: this.fromAddress, name: this.fromName },
+          to: [{ email_address: { address: to } }],
+          subject: 'Zenex test email',
+          htmlbody:
+            '<p>If you are reading this, Zenex can send email successfully.</p>',
+          textbody: 'If you are reading this, Zenex can send email successfully.',
+        }),
+      });
+
+      const body = await res.text();
+      return {
+        sent: res.ok,
+        mode: 'live' as const,
+        httpStatus: res.status,
+        from: this.fromAddress,
+        to,
+        // Zoho's own error code and message live here — this is the bit that
+        // actually names the problem.
+        providerResponse: body.slice(0, 1500),
+      };
+    } catch (e) {
+      return {
+        sent: false,
+        mode: 'live' as const,
+        error: (e as Error).message,
+      };
+    }
+  }
+
   /** Never throws: a failed email must not roll back the action that caused it. */
   async send(input: SendMailInput): Promise<void> {
     if (!this.enabled) {

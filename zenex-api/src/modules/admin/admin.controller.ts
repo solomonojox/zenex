@@ -14,6 +14,8 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
+import { TestEmailDto } from './dto/test-email.dto';
+import { MailService } from '../mail/mail.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -27,7 +29,21 @@ import {
 @Roles(Role.ADMIN)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly mail: MailService,
+  ) {}
+
+  /**
+   * Send a test email and return the provider's raw reply.
+   *
+   * Admin-only: it reveals the sender address and the provider's error text,
+   * and it can send mail to an arbitrary address.
+   */
+  @Post('test-email')
+  testEmail(@CurrentUser() user: AuthUser, @Body() dto: TestEmailDto) {
+    return this.mail.sendTest(dto.to);
+  }
 
   @Get('overview')
   overview(@CurrentUser() user: AuthUser) {
