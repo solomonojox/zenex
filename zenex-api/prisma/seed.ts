@@ -448,7 +448,11 @@ async function main() {
 
       const booking = await prisma.booking.upsert({
         where: { reference },
-        update: {},
+        // Re-point the client on re-run. With `update: {}` the seed was
+        // create-only, so correcting the reviewer/provider pairing had no
+        // effect on rows that already existed — the fix could never reach the
+        // data it was written for.
+        update: { clientId },
         create: {
           reference,
           tenantId: tenant.id,
@@ -470,7 +474,9 @@ async function main() {
 
       await prisma.review.upsert({
         where: { bookingId: booking.id },
-        update: {},
+        // Same reasoning as the booking above: the review carries its own
+        // clientId, so both have to move together or they disagree.
+        update: { clientId, rating, comment },
         create: {
           bookingId: booking.id,
           clientId,
