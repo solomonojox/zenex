@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Settings } from "lucide-react";
 import NotificationBell from "@/components/nav/NotificationBell";
-import { useAuth } from "@/context/auth/useAuth";
+import RouteGuard from "@/components/auth/RouteGuard";
 import { useMe } from "@/lib/queries/users";
 import OverviewTab from "@/components/provider/OverviewTab";
 import JobsTab from "@/components/provider/JobsTab";
@@ -22,19 +21,16 @@ type TabKey =
   | "profile";
 
 export default function ProviderDashboardPage() {
-  const router = useRouter();
-  const { isAuthenticated, authLoading, user } = useAuth();
-  const { data: me } = useMe(isAuthenticated);
-  const [tab, setTab] = useState<TabKey>("overview");
+  return (
+    <RouteGuard roles={["PROVIDER"]}>
+      <ProviderDashboard />
+    </RouteGuard>
+  );
+}
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      router.replace("/auth?mode=login");
-    } else if (user?.role && user.role !== "PROVIDER" && user.role !== "ADMIN") {
-      router.replace("/client");
-    }
-  }, [authLoading, isAuthenticated, user, router]);
+function ProviderDashboard() {
+  const { data: me } = useMe();
+  const [tab, setTab] = useState<TabKey>("overview");
 
   const pp = me?.providerProfile;
   const name = me ? `${me.firstName} ${me.lastName}`.trim() : "Provider";

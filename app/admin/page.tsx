@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
-import { useAuth } from "@/context/auth/useAuth";
+import RouteGuard from "@/components/auth/RouteGuard";
 import OverviewTab from "@/components/admin/OverviewTab";
 import UsersTab from "@/components/admin/UsersTab";
 import VerifyTab from "@/components/admin/VerifyTab";
@@ -12,23 +11,15 @@ import DisputesTab from "@/components/admin/DisputesTab";
 type TabKey = "overview" | "users" | "verify" | "disputes";
 
 export default function AdminPage() {
-  const router = useRouter();
-  const { isAuthenticated, authLoading, user } = useAuth();
+  return (
+    <RouteGuard roles={["ADMIN"]}>
+      <AdminPanel />
+    </RouteGuard>
+  );
+}
+
+function AdminPanel() {
   const [adminTab, setAdminTab] = useState<TabKey>("overview");
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      router.replace("/auth?mode=login");
-    } else if (user?.role && user.role !== "ADMIN") {
-      router.replace(user.role === "PROVIDER" ? "/provider" : "/client");
-    }
-  }, [authLoading, isAuthenticated, user, router]);
-
-  // Don't flash admin content to non-admins while redirecting.
-  if (user?.role && user.role !== "ADMIN") {
-    return <div className="min-h-screen bg-[#F8FAFB]" />;
-  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFB]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
