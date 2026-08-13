@@ -4,8 +4,9 @@
  *
  * Run with: npm run prisma:seed
  */
-import { PrismaClient, Role } from '@prisma/client';
+import { BookingStatus, PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { calculateTax } from '../src/common/tax/canadian-tax';
 
 const prisma = new PrismaClient();
 
@@ -77,7 +78,214 @@ const PROVIDERS = [
       { name: 'Eco Deep Clean', duration: '4–6 hrs', price: 190, description: 'Full eco-certified deep clean' },
     ],
   },
+
+  // ── Greater Toronto Area roster ──
+  // Written as "<District>, Toronto, ON" because North York, Scarborough and
+  // Etobicoke are districts *within* the City of Toronto. That matters
+  // mechanically, not just cosmetically: findMatches() filters on
+  // `location contains <city>`, so this format keeps them discoverable to a
+  // client searching "Toronto" while still showing a recognisable
+  // neighbourhood on the card.
+  {
+    firstName: 'Priya',
+    lastName: 'Sharma',
+    title: 'Residential Cleaning Professional',
+    location: 'Scarborough, Toronto, ON',
+    rating: 4.96,
+    reviewsCount: 143,
+    hourlyRate: 42,
+    verified: true,
+    elite: true,
+    instant: true,
+    tags: ['Recurring', 'Standard Clean', 'Condo'],
+    completions: 389,
+    responseTime: '< 30 min',
+    languages: ['English', 'Hindi', 'Punjabi'],
+    bio: 'Six years cleaning homes and condos across east Toronto. Most of my clients book me every second week — I learn how you like things done and keep it that way.',
+    aiMatch: 95,
+    services: [
+      { name: 'Standard Clean', duration: '2–3 hrs', price: 88, description: 'Kitchen, bathrooms, bedrooms, living areas' },
+      { name: 'Condo Clean', duration: '1.5–2 hrs', price: 72, description: 'Compact one and two-bedroom units' },
+      { name: 'Deep Clean', duration: '4–5 hrs', price: 175, description: 'Standard plus appliances, baseboards and cabinet interiors' },
+    ],
+  },
+  {
+    firstName: 'Amara',
+    lastName: 'Okafor',
+    title: 'Deep Clean & Sanitisation Specialist',
+    location: 'North York, Toronto, ON',
+    rating: 4.89,
+    reviewsCount: 96,
+    hourlyRate: 46,
+    verified: true,
+    elite: false,
+    instant: true,
+    tags: ['Deep Clean', 'Sanitisation', 'Pet-friendly'],
+    completions: 214,
+    responseTime: '< 1 hr',
+    languages: ['English', 'Igbo'],
+    bio: 'Hospital-grade sanitisation background. Comfortable in homes with pets, allergies or anyone immunocompromised.',
+    aiMatch: 93,
+    services: [
+      { name: 'Standard Clean', duration: '2–3 hrs', price: 92, description: 'Kitchen, bathrooms, bedrooms, living areas' },
+      { name: 'Deep Clean & Sanitise', duration: '4–6 hrs', price: 195, description: 'Deep clean plus full sanitisation of high-touch surfaces' },
+    ],
+  },
+  {
+    firstName: 'Sofia',
+    lastName: 'Rossi',
+    title: 'Post-Renovation & Move-Out Clean',
+    location: 'Toronto, ON',
+    rating: 4.88,
+    reviewsCount: 91,
+    hourlyRate: 55,
+    verified: true,
+    elite: false,
+    instant: true,
+    tags: ['Post-reno', 'Move-in/out', 'Deep Clean'],
+    completions: 176,
+    responseTime: '< 2 hr',
+    languages: ['English', 'Italian'],
+    bio: 'I handle the cleans other people turn down — construction dust, paint splatter, empty units that need to pass a landlord inspection.',
+    aiMatch: 88,
+    services: [
+      { name: 'Post-Renovation Clean', duration: '5–8 hrs', price: 280, description: 'Construction dust, residue and debris removal' },
+      { name: 'Move In/Out', duration: '5–7 hrs', price: 235, description: 'Inspection-ready clean inside every cupboard and appliance' },
+    ],
+  },
+  {
+    firstName: 'Luc',
+    lastName: 'Tremblay',
+    title: 'Condo & Apartment Specialist',
+    location: 'Etobicoke, Toronto, ON',
+    rating: 4.81,
+    reviewsCount: 67,
+    hourlyRate: 40,
+    verified: true,
+    elite: false,
+    instant: false,
+    tags: ['Condo', 'Standard Clean', 'Move-in/out'],
+    completions: 158,
+    responseTime: '< 3 hr',
+    languages: ['English', 'French'],
+    bio: 'Condos and apartments are all I do. Bilingual — happy to work in French or English.',
+    aiMatch: 84,
+    services: [
+      { name: 'Condo Clean', duration: '1.5–2 hrs', price: 70, description: 'Studio to two-bedroom units' },
+      { name: 'Standard Clean', duration: '2–3 hrs', price: 85, description: 'Kitchen, bathrooms, bedrooms, living areas' },
+    ],
+  },
+  {
+    // Deliberately unverified and low-volume: exercises the "pending
+    // verification" badge, the verified-first ordering in findMatches(), and
+    // the empty state a genuinely new provider sees on their dashboard.
+    firstName: 'Daniel',
+    lastName: 'Mensah',
+    title: 'Office & Small Business Cleaning',
+    location: 'Mississauga, ON',
+    rating: 4.74,
+    reviewsCount: 38,
+    hourlyRate: 44,
+    verified: false,
+    elite: false,
+    instant: false,
+    tags: ['Office', 'Commercial', 'Evening'],
+    completions: 52,
+    responseTime: '< 4 hr',
+    languages: ['English', 'Twi'],
+    bio: 'Evening and weekend cleaning for small offices, clinics and studios around Mississauga.',
+    aiMatch: 76,
+    services: [
+      { name: 'Small Office Clean', duration: '2–3 hrs', price: 110, description: 'Desks, kitchenette, washrooms and common areas' },
+      { name: 'Commercial Deep Clean', duration: '4–6 hrs', price: 240, description: 'Quarterly deep clean for commercial premises' },
+    ],
+  },
 ];
+
+// ─────────────── Review data ───────────────
+//
+// `rating` and `reviewsCount` on ProviderProfile are denormalised columns.
+// Filling them with invented figures makes a profile announce "143 reviews"
+// while the Reviews tab underneath sits empty — a contradiction any client
+// sees the moment they click through, and one that reads as a broken site.
+//
+// So every review below hangs off a real COMPLETED booking, and after seeding
+// the headline rating and count are recomputed from the rows that actually
+// exist. The numbers are smaller than the placeholders they replace. They are
+// also true, which matters more: inflated review counts on a live marketplace
+// are a misleading-representation risk under the Competition Act, and worth
+// raising with whoever reviews your legal pages.
+
+/** Extra client accounts, so reviews come from a spread of people. */
+const CLIENTS = [
+  { firstName: 'Nadia', lastName: 'Haddad', city: 'Toronto' },
+  { firstName: 'Owen', lastName: 'Fitzgerald', city: 'Toronto' },
+  { firstName: 'Mei', lastName: 'Lin', city: 'Scarborough' },
+  { firstName: 'Grace', lastName: 'Adeyemi', city: 'North York' },
+  { firstName: 'Tomas', lastName: 'Novak', city: 'Etobicoke' },
+  { firstName: 'Rachel', lastName: 'Boucher', city: 'Mississauga' },
+  { firstName: 'Ibrahim', lastName: 'Farah', city: 'Toronto' },
+  { firstName: 'Hannah', lastName: 'Whitfield', city: 'Vancouver' },
+];
+
+/** [rating, comment, daysAgo] keyed by provider first name. */
+const REVIEWS: Record<string, Array<[number, string, number]>> = {
+  Maria: [
+    [5, 'Maria has cleaned our place monthly for over a year. I have never once had to point anything out — she just knows.', 12],
+    [5, 'Booked a deep clean before my in-laws arrived. The oven looked new. Worth every dollar.', 34],
+    [5, 'Punctual, thorough, and genuinely lovely to deal with.', 58],
+    [4, 'Great clean overall. Only note is that she arrived about twenty minutes late, though she did message ahead.', 79],
+    [5, 'Move-out clean — the landlord returned our full deposit without a word.', 103],
+    [5, 'Second time booking her. Consistent, which is the thing I actually care about.', 141],
+    [5, 'Very thorough with the bathrooms. The grout looks completely different.', 168],
+  ],
+  James: [
+    [5, 'Cleans our office every Friday evening. Reliable and completely unobtrusive.', 9],
+    [5, 'Booked him for a post-party disaster. He did not blink.', 41],
+    [4, 'Good work on the commercial space. Would have liked a bit more attention to the windows.', 66],
+    [5, 'Professional, and quick to reply to messages.', 95],
+    [5, 'He has keys to our unit and we trust him entirely. That says it all.', 132],
+  ],
+  David: [
+    [5, 'The eco products matter to us — two kids and a dog. No harsh smells at all.', 15],
+    [5, 'David explained exactly which products he uses and why. Impressed.', 47],
+    [5, 'Deep clean with no chemical headache afterwards. Rare.', 72],
+    [4, 'Lovely work, though scheduling took a couple of messages to pin down.', 110],
+    [5, 'Our cat has allergies and this is the first cleaner who has not set her off.', 155],
+  ],
+  Priya: [
+    [5, 'Every second Tuesday for eight months now. Priya is the reason I stopped cleaning on weekends.', 7],
+    [5, 'She remembers that I like the cushions a certain way. Small thing, but it is the difference.', 28],
+    [5, 'Condo looked better than the day I moved in.', 52],
+    [5, 'Fast, quiet, and she works around me when I am on calls.', 88],
+    [4, 'Very good. Missed under the bed the first time, sorted immediately when I mentioned it.', 119],
+    [5, 'Booked her for my mother’s place as well. Same standard.', 147],
+  ],
+  Amara: [
+    [5, 'My partner is immunocompromised and Amara took that seriously without me having to explain twice.', 11],
+    [5, 'Sanitising clean after we all had the flu. Felt like a different flat.', 38],
+    [5, 'Thorough well beyond what I expected at this price.', 63],
+    [5, 'Great with our two dogs — did not rush them or leave the gate open.', 97],
+    [4, 'Solid deep clean. Ran slightly over the estimate, but she stayed to finish it properly.', 128],
+  ],
+  Sofia: [
+    [5, 'Post-renovation dust everywhere. Sofia got it out of places I had not thought to look.', 19],
+    [5, 'Landlord inspection passed first time after her move-out clean.', 44],
+    [5, 'She takes the jobs other cleaners quote high on and then cancel.', 81],
+    [4, 'Excellent result. Pricier than others, but nobody else would take the job.', 116],
+  ],
+  Luc: [
+    [5, 'Bilingual and easy to deal with. Apartment spotless.', 22],
+    [4, 'Good standard clean for the price. Nothing flashy, just done properly.', 55],
+    [5, 'Studio done in ninety minutes and it looked immaculate.', 91],
+    [5, 'Reliable for a small place. Exactly what I needed.', 134],
+  ],
+  Daniel: [
+    [5, 'Cleans our clinic after hours. No disruption to patients at all.', 16],
+    [4, 'Decent job on the office. Still finding his feet on the bigger spaces, but the price is fair.', 49],
+    [5, 'Responsive and willing to work late evenings, which nobody else offered.', 87],
+  ],
+};
 
 async function main() {
   console.log('Seeding…');
@@ -91,7 +299,7 @@ async function main() {
   const passwordHash = await argon2.hash('password123');
 
   // Demo client
-  await prisma.user.upsert({
+  const demoClient = await prisma.user.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: 'client@zenex.ca' } },
     update: {},
     create: {
@@ -104,6 +312,7 @@ async function main() {
       clientProfile: { create: { city: 'Toronto' } },
       wallet: { create: {} },
     },
+    include: { clientProfile: true },
   });
 
   // Providers
@@ -164,6 +373,125 @@ async function main() {
       wallet: { create: {} },
     },
   });
+
+  // ── Reviewer accounts ──
+  // Alexandra goes in the pool too, so the demo login has real history on its
+  // dashboard rather than an empty state.
+  const clientIds: string[] = demoClient.clientProfile
+    ? [demoClient.clientProfile.id]
+    : [];
+
+  for (const c of CLIENTS) {
+    const email = `${c.firstName.toLowerCase()}.${c.lastName.toLowerCase()}@example.ca`;
+    const u = await prisma.user.upsert({
+      where: { tenantId_email: { tenantId: tenant.id, email } },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        email,
+        passwordHash,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        role: Role.CLIENT,
+        clientProfile: { create: { city: c.city } },
+        wallet: { create: {} },
+      },
+      include: { clientProfile: true },
+    });
+    if (u.clientProfile) clientIds.push(u.clientProfile.id);
+  }
+  console.log(`  ${clientIds.length} client accounts available as reviewers`);
+
+  // ── Completed bookings + the reviews that hang off them ──
+  // References are prefixed BK-S so seeded history is trivially distinguishable
+  // from real bookings, and both writes upsert so re-running changes nothing.
+  let ref = 9000;
+  let reviewsSeeded = 0;
+
+  for (const p of PROVIDERS) {
+    const rows = REVIEWS[p.firstName] ?? [];
+    if (!rows.length || !clientIds.length) continue;
+
+    const profile = await prisma.providerProfile.findFirst({
+      where: {
+        tenantId: tenant.id,
+        user: { email: `${p.firstName.toLowerCase()}@zenex.ca` },
+      },
+      include: { services: true },
+    });
+    if (!profile) continue;
+
+    for (const [rating, comment, daysAgo] of rows) {
+      ref += 1;
+      const reference = `BK-S${ref}`;
+      // Deterministic round-robin: the same run always produces the same
+      // pairing, so screenshots and tests stay stable.
+      const clientId = clientIds[(ref - 9001) % clientIds.length];
+      const service = profile.services[0];
+      const basePrice = service?.price ?? profile.hourlyRate * 2;
+      // Same tax engine the live booking path uses, so seeded totals are
+      // consistent with anything created through the API.
+      const tax = calculateTax(basePrice, profile.location);
+
+      const scheduledFor = new Date(Date.now() - daysAgo * 86_400_000);
+      scheduledFor.setUTCHours(10, 0, 0, 0);
+
+      const booking = await prisma.booking.upsert({
+        where: { reference },
+        update: {},
+        create: {
+          reference,
+          tenantId: tenant.id,
+          clientId,
+          providerId: profile.id,
+          serviceId: service?.id,
+          scheduledFor,
+          durationMins: 120,
+          timeSlot: '10:00 AM – 12:00 PM',
+          status: BookingStatus.COMPLETED,
+          basePrice: tax.subtotal,
+          taxAmount: tax.taxAmount,
+          taxRate: tax.taxRate,
+          taxLabel: tax.taxLabel,
+          province: tax.province,
+          totalPrice: tax.total,
+        },
+      });
+
+      await prisma.review.upsert({
+        where: { bookingId: booking.id },
+        update: {},
+        create: {
+          bookingId: booking.id,
+          clientId,
+          providerId: profile.id,
+          rating,
+          comment,
+          // Reviews land the day after the job, not the day of the seed.
+          createdAt: new Date(scheduledFor.getTime() + 86_400_000),
+        },
+      });
+      reviewsSeeded += 1;
+    }
+
+    // Headline figures recomputed from the rows that exist, rather than
+    // trusted from the fixture above.
+    const agg = await prisma.review.aggregate({
+      where: { providerId: profile.id },
+      _avg: { rating: true },
+      _count: true,
+    });
+    await prisma.providerProfile.update({
+      where: { id: profile.id },
+      data: {
+        rating: Math.round((agg._avg.rating ?? 0) * 100) / 100,
+        reviewsCount: agg._count,
+      },
+    });
+  }
+  console.log(
+    `  ${reviewsSeeded} reviews on ${reviewsSeeded} completed bookings; ratings recomputed from real rows`,
+  );
 
   // Default weekly availability for every provider: Mon–Sat, 8:00–18:00.
   const allProviders = await prisma.providerProfile.findMany({
@@ -294,7 +622,15 @@ async function main() {
     console.log('  seeded 3 subscription plans');
   }
 
-  console.log('Seed complete. Logins (password123): client@zenex.ca, maria@zenex.ca, admin@zenex.ca');
+  console.log(
+    `\nSeed complete — ${PROVIDERS.length} providers on tenant "${tenant.slug}".`,
+  );
+  console.log('All logins use password123:');
+  console.log('  client@zenex.ca   (client)');
+  console.log('  admin@zenex.ca    (admin)');
+  console.log(
+    `  providers:        ${PROVIDERS.map((p) => `${p.firstName.toLowerCase()}@zenex.ca`).join(', ')}`,
+  );
 }
 
 main()

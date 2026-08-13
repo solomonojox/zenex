@@ -6,6 +6,19 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { calculateTax } from '../../common/tax/canadian-tax';
+import { isWithinRadius } from '../../common/geo/canadian-cities';
+
+/**
+ * How many providers to pull before filtering by service area. Distance can't
+ * be computed in the query, so the pool is fetched ordered (verified first,
+ * then rating) and narrowed in memory. Fine at this roster size; a PostGIS
+ * geography column with a GiST index is the answer once it isn't.
+ */
+const CANDIDATE_POOL = 200;
+
+/** Upper bound on providers we run availability checks against — each one
+ *  costs two more queries, so this caps the fan-out. */
+const MAX_AVAILABILITY_CHECKS = 25;
 
 export interface PricedOption {
   key: string;
@@ -109,8 +122,43 @@ export class QuotesService {
   }
 
   /**
-   * Providers who could take this job: verified first, matching the region,
-   * and genuinely free for the whole slot. Ranked by rating.
+   * Providers whose service area covers `location`, verified first.
+   *
+   * Matching used to be a substring test on the location string, which meant a
+   * cleaner in Mississauga was invisible to a client in Toronto — twenty
+   * minutes apart — while each provider's own `maxRadiusKm` went unread. This
+   * measures actual distance and honours that radius.
+   *
+   * Where either location isn't in the coordinate table, it falls back to the
+   * old substring test: an unrecognised town behaves exactly as it does today
+   * rather than dropping the provider entirely.
+   */
+  private async serviceableProviders(tenantSlug: string, location?: string) {
+    const candidates = await this.prisma.providerProfile.findMany({
+      where: {
+        tenant: { slug: tenantSlug || 'demo' },
+        // Must be bookable at all.
+        services: { some: {} },
+      },
+      include: { user: { select: { firstName: true, lastName: true } } },
+      orderBy: [{ verified: 'desc' }, { rating: 'desc' }],
+      take: CANDIDATE_POOL,
+    });
+
+    if (!location) return candidates.slice(0, MAX_AVAILABILITY_CHECKS);
+
+    const city = location.split(',')[0].trim().toLowerCase();
+    const nearby = candidates.filter((p) => {
+      const within = isWithinRadius(p.location, location, p.maxRadiusKm);
+      return within ?? p.location.toLowerCase().includes(city);
+    });
+
+    return nearby.slice(0, MAX_AVAILABILITY_CHECKS);
+  }
+
+  /**
+   * Providers who could take this job: verified first, within range, and
+   * genuinely free for the whole slot. Ranked by rating.
    */
   async findMatches(
     tenantSlug: string,
@@ -121,19 +169,10 @@ export class QuotesService {
       limit?: number;
     },
   ): Promise<MatchedProvider[]> {
-    const candidates = await this.prisma.providerProfile.findMany({
-      where: {
-        tenant: { slug: tenantSlug || 'demo' },
-        // Must be bookable at all.
-        services: { some: {} },
-        ...(opts.location
-          ? { location: { contains: opts.location.split(',')[0].trim(), mode: 'insensitive' as const } }
-          : {}),
-      },
-      include: { user: { select: { firstName: true, lastName: true } } },
-      orderBy: [{ verified: 'desc' }, { rating: 'desc' }],
-      take: 25,
-    });
+    const candidates = await this.serviceableProviders(
+      tenantSlug,
+      opts.location,
+    );
 
     const free: MatchedProvider[] = [];
     for (const p of candidates) {
@@ -184,17 +223,12 @@ export class QuotesService {
   ) {
     const priced = await this.priceOne(tenantSlug, opts);
 
-    const providers = await this.prisma.providerProfile.findMany({
-      where: {
-        tenant: { slug: tenantSlug || 'demo' },
-        services: { some: {} },
-        ...(opts.location
-          ? { location: { contains: opts.location.split(',')[0].trim(), mode: 'insensitive' as const } }
-          : {}),
-      },
-      select: { id: true },
-      take: 25,
-    });
+    // Same service-area rules as findMatches, so the times offered here are
+    // the times someone can actually be assigned to.
+    const providers = await this.serviceableProviders(
+      tenantSlug,
+      opts.location,
+    );
 
     // Merge every provider's openings — a time is offered if anyone is free.
     const merged = new Map<string, { start: string; label: string; count: number }>();

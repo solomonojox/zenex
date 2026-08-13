@@ -1,103 +1,171 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as T from './templates';
+import type { RenderedEmail } from './templates';
 
 export interface SendMailInput {
   to: string;
+  toName?: string;
   subject: string;
   html: string;
+  text?: string;
+  /** Shows against the send in ZeptoMail's log — use a booking reference. */
+  reference?: string;
 }
 
 /**
- * Transactional email via Resend's HTTP API (no SDK needed).
+ * Transactional email via ZeptoMail's HTTP API.
  *
- * If RESEND_API_KEY is absent the service runs in LOG mode: emails are written
- * to the server log instead of being sent, so the whole flow works in
- * development without an email provider — same graceful-degradation pattern
- * as the Stripe demo mode.
+ * No SDK: the API is a single JSON POST, and pulling in a dependency to build
+ * one request is not worth the supply-chain surface. Two details of Zoho's API
+ * catch people out and are easy to get wrong:
+ *
+ *   - The auth header value is `Zoho-enczapikey <token>`, not `Bearer <token>`.
+ *   - Recipients are nested: `to: [{ email_address: { address, name } }]`.
+ *
+ * If the token is absent the service runs in LOG mode — emails go to the
+ * server log instead of the wire — so the whole app works in development
+ * without an email provider, the same graceful-degradation pattern used for
+ * Stripe demo mode.
  */
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly apiKey: string;
-  private readonly from: string;
+  private readonly token: string;
+  private readonly apiUrl: string;
+  private readonly fromAddress: string;
+  private readonly fromName: string;
+  private readonly replyTo: string;
   private readonly appUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.apiKey = this.config.get<string>('mail.apiKey') || '';
-    this.from =
-      this.config.get<string>('mail.from') || 'Zenex <onboarding@resend.dev>';
+    this.token = this.config.get<string>('mail.token') || '';
+    this.apiUrl =
+      this.config.get<string>('mail.apiUrl') ||
+      'https://api.zeptomail.com/v1.1/email';
+    this.replyTo = this.config.get<string>('mail.replyTo') || '';
     this.appUrl =
       this.config.get<string>('mail.appUrl') || 'http://localhost:3000';
 
-    if (!this.apiKey) {
-      this.logger.warn('RESEND_API_KEY not set — emails will be logged, not sent');
+    // MAIL_FROM may be a bare address or "Zenex <no-reply@zenex.ca>". Accept
+    // both so the variable can stay as-is from the Resend setup.
+    const raw = this.config.get<string>('mail.from') || '';
+    const bracketed = raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+    this.fromAddress = (bracketed ? bracketed[2] : raw).trim();
+    this.fromName =
+      this.config.get<string>('mail.fromName') ||
+      (bracketed ? bracketed[1].replace(/^"|"$/g, '').trim() : '') ||
+      'Zenex';
+
+    if (!this.token) {
+      this.logger.warn(
+        'ZEPTOMAIL_TOKEN not set — emails will be logged, not sent',
+      );
+    } else if (!this.fromAddress) {
+      this.logger.error(
+        'ZEPTOMAIL_TOKEN is set but MAIL_FROM is empty — sends will be rejected',
+      );
     }
   }
 
   get enabled(): boolean {
-    return !!this.apiKey;
+    return !!this.token && !!this.fromAddress;
   }
 
-  /** Never throws: a failed email must not break the surrounding action. */
+  /** Never throws: a failed email must not roll back the action that caused it. */
   async send(input: SendMailInput): Promise<void> {
     if (!this.enabled) {
       this.logger.log(`[email:log-mode] To: ${input.to} — ${input.subject}`);
       return;
     }
+
     try {
-      const res = await fetch('https://api.resend.com/emails', {
+      const res = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          // Zoho's scheme, not Bearer.
+          Authorization: `Zoho-enczapikey ${this.token}`,
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
-          from: this.from,
-          to: [input.to],
+          from: { address: this.fromAddress, name: this.fromName },
+          to: [
+            {
+              email_address: {
+                address: input.to,
+                ...(input.toName ? { name: input.toName } : {}),
+              },
+            },
+          ],
+          ...(this.replyTo
+            ? { reply_to: [{ address: this.replyTo, name: this.fromName }] }
+            : {}),
           subject: input.subject,
-          html: input.html,
+          htmlbody: input.html,
+          ...(input.text ? { textbody: input.text } : {}),
+          ...(input.reference ? { client_reference: input.reference } : {}),
+          // Open/click pixels in a booking receipt are hard to justify to a
+          // customer and add nothing operationally. Off by default.
+          track_opens: false,
+          track_clicks: false,
         }),
       });
+
       if (!res.ok) {
-        this.logger.warn(`Email send failed (${res.status}): ${await res.text()}`);
+        // Body carries Zoho's error code and the offending field, which is the
+        // only way to tell "unverified sender domain" from "bad token".
+        this.logger.warn(
+          `Email send failed (${res.status}) to ${input.to}: ${await res.text()}`,
+        );
       }
     } catch (e) {
       this.logger.warn(`Email send error: ${(e as Error).message}`);
     }
   }
 
-  // ─────────────── Templates ───────────────
-
-  private layout(heading: string, body: string, cta?: { label: string; url: string }) {
-    return `
-<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0f172a">
-  <div style="font-size:20px;font-weight:800;color:#0d9488;margin-bottom:20px">Zenex</div>
-  <h1 style="font-size:20px;margin:0 0 12px">${heading}</h1>
-  <div style="font-size:14px;line-height:1.6;color:#475569">${body}</div>
-  ${
-    cta
-      ? `<a href="${cta.url}" style="display:inline-block;margin-top:20px;background:#0d9488;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:10px">${cta.label}</a>`
-      : ''
-  }
-  <p style="font-size:12px;color:#94a3b8;margin-top:28px;border-top:1px solid #e2e8f0;padding-top:14px">
-    Zenex — Canada's trusted cleaning marketplace.
-  </p>
-</div>`.trim();
-  }
-
-  /** Formats a booking time in UTC to match how slots are stored/displayed. */
-  private when(date: Date) {
-    return date.toLocaleString('en-CA', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone: 'UTC',
+  /** Send an already-rendered template. */
+  private async dispatch(
+    to: string,
+    toName: string | undefined,
+    email: RenderedEmail,
+    reference?: string,
+  ) {
+    await this.send({
+      to,
+      toName,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      reference,
     });
   }
 
-  async bookingConfirmed(opts: {
+  private get ctx() {
+    return { appUrl: this.appUrl };
+  }
+
+  // ─────────────── onboarding ───────────────
+
+  async welcomeClient(o: { to: string; name: string }) {
+    await this.dispatch(o.to, o.name, T.welcomeClient({ ...this.ctx, ...o }));
+  }
+
+  async welcomeProvider(o: { to: string; name: string }) {
+    await this.dispatch(o.to, o.name, T.welcomeProvider({ ...this.ctx, ...o }));
+  }
+
+  async verifyEmail(o: { to: string; name: string; token: string }) {
+    await this.dispatch(o.to, o.name, T.verifyEmail({ ...this.ctx, ...o }));
+  }
+
+  async passwordReset(o: { to: string; name: string; token: string }) {
+    await this.dispatch(o.to, o.name, T.passwordReset({ ...this.ctx, ...o }));
+  }
+
+  // ─────────────── bookings ───────────────
+
+  async bookingConfirmed(o: {
     to: string;
     clientName: string;
     providerName: string;
@@ -105,90 +173,246 @@ export class MailService {
     reference: string;
     scheduledFor: Date;
     total: number;
+    address?: string | null;
   }) {
-    await this.send({
-      to: opts.to,
-      subject: `Booking confirmed — ${opts.reference}`,
-      html: this.layout(
-        `You're booked, ${opts.clientName}!`,
-        `<p><strong>${opts.serviceName}</strong> with ${opts.providerName}</p>
-         <p><strong>${this.when(opts.scheduledFor)}</strong></p>
-         <p>Reference: ${opts.reference}<br/>Total charged: $${opts.total.toFixed(2)} CAD</p>`,
-        { label: 'View booking', url: `${this.appUrl}/client` },
-      ),
-    });
+    await this.dispatch(
+      o.to,
+      o.clientName,
+      T.bookingConfirmed({ ...this.ctx, ...o }),
+      o.reference,
+    );
   }
 
-  async newBookingForProvider(opts: {
+  async newBookingForProvider(o: {
     to: string;
     providerName: string;
     clientName: string;
     serviceName: string;
     reference: string;
     scheduledFor: Date;
+    address?: string | null;
+    payout?: number;
   }) {
-    await this.send({
-      to: opts.to,
-      subject: `New booking — ${opts.reference}`,
-      html: this.layout(
-        `New job booked, ${opts.providerName}`,
-        `<p><strong>${opts.serviceName}</strong> for ${opts.clientName}</p>
-         <p><strong>${this.when(opts.scheduledFor)}</strong></p>
-         <p>Reference: ${opts.reference}</p>`,
-        { label: 'Open dashboard', url: `${this.appUrl}/provider` },
-      ),
-    });
+    await this.dispatch(
+      o.to,
+      o.providerName,
+      T.newBookingForProvider({ ...this.ctx, ...o }),
+      o.reference,
+    );
   }
 
-  async bookingReminder(opts: {
+  async bookingReminder(o: {
     to: string;
     name: string;
     counterpartName: string;
     serviceName: string;
     reference: string;
     scheduledFor: Date;
+    address?: string | null;
   }) {
-    await this.send({
-      to: opts.to,
-      subject: `Reminder: your clean is tomorrow (${opts.reference})`,
-      html: this.layout(
-        `See you tomorrow, ${opts.name}`,
-        `<p><strong>${opts.serviceName}</strong> with ${opts.counterpartName}</p>
-         <p><strong>${this.when(opts.scheduledFor)}</strong></p>
-         <p>Need to change something? You can manage this booking in your dashboard.</p>`,
-        { label: 'Manage booking', url: `${this.appUrl}/client` },
-      ),
-    });
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.bookingReminder({ ...this.ctx, ...o }),
+      o.reference,
+    );
   }
 
-  async passwordReset(opts: { to: string; name: string; token: string }) {
-    const url = `${this.appUrl}/auth/reset?token=${encodeURIComponent(opts.token)}`;
-    await this.send({
-      to: opts.to,
-      subject: 'Reset your Zenex password',
-      html: this.layout(
-        'Reset your password',
-        `<p>Hi ${opts.name}, we received a request to reset your Zenex password.</p>
-         <p>This link expires in <strong>1 hour</strong>. If you didn't ask for this, you can safely ignore this email.</p>`,
-        { label: 'Choose a new password', url },
-      ),
-    });
-  }
-
-  async bookingCancelled(opts: {
+  async bookingCancelled(o: {
     to: string;
     name: string;
     reference: string;
     serviceName: string;
+    scheduledFor?: Date;
+    refundAmount?: number;
+    cancelledBy?: string;
   }) {
-    await this.send({
-      to: opts.to,
-      subject: `Booking cancelled — ${opts.reference}`,
-      html: this.layout(
-        `Booking cancelled`,
-        `<p>Hi ${opts.name}, booking <strong>${opts.reference}</strong> (${opts.serviceName}) has been cancelled.</p>`,
-        { label: 'Book again', url: `${this.appUrl}/search` },
-      ),
-    });
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.bookingCancelled({ ...this.ctx, ...o }),
+      o.reference,
+    );
+  }
+
+  async bookingRescheduled(o: {
+    to: string;
+    name: string;
+    reference: string;
+    serviceName: string;
+    previous: Date;
+    scheduledFor: Date;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.bookingRescheduled({ ...this.ctx, ...o }),
+      o.reference,
+    );
+  }
+
+  async reviewRequest(o: {
+    to: string;
+    clientName: string;
+    providerName: string;
+    reference: string;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.clientName,
+      T.reviewRequest({ ...this.ctx, ...o }),
+      o.reference,
+    );
+  }
+
+  // ─────────────── money ───────────────
+
+  async paymentReceipt(o: {
+    to: string;
+    clientName: string;
+    reference: string;
+    serviceName: string;
+    scheduledFor: Date;
+    subtotal: number;
+    extrasTotal?: number;
+    taxAmount: number;
+    taxLabel: string;
+    total: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.clientName,
+      T.paymentReceipt({ ...this.ctx, ...o }),
+      o.reference,
+    );
+  }
+
+  async refundIssued(o: {
+    to: string;
+    name: string;
+    reference: string;
+    amount: number;
+    reason?: string;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.refundIssued({ ...this.ctx, ...o }),
+      o.reference,
+    );
+  }
+
+  async payoutSent(o: {
+    to: string;
+    providerName: string;
+    amount: number;
+    jobCount?: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.providerName,
+      T.payoutSent({ ...this.ctx, ...o }),
+    );
+  }
+
+  async stripeOnboardingReminder(o: {
+    to: string;
+    providerName: string;
+    pendingAmount?: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.providerName,
+      T.stripeOnboardingReminder({ ...this.ctx, ...o }),
+    );
+  }
+
+  async subscriptionStarted(o: {
+    to: string;
+    name: string;
+    planName: string;
+    frequency: string;
+    price: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.subscriptionStarted({ ...this.ctx, ...o }),
+    );
+  }
+
+  // ─────────────── trust & verification ───────────────
+
+  async kycApproved(o: { to: string; providerName: string }) {
+    await this.dispatch(
+      o.to,
+      o.providerName,
+      T.kycApproved({ ...this.ctx, ...o }),
+    );
+  }
+
+  async kycRejected(o: {
+    to: string;
+    providerName: string;
+    reason?: string;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.providerName,
+      T.kycRejected({ ...this.ctx, ...o }),
+    );
+  }
+
+  async insuranceExpiring(o: {
+    to: string;
+    providerName: string;
+    expiresOn: Date;
+    daysLeft: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.providerName,
+      T.insuranceExpiring({ ...this.ctx, ...o }),
+    );
+  }
+
+  // ─────────────── messaging & disputes ───────────────
+
+  async newMessage(o: {
+    to: string;
+    name: string;
+    senderName: string;
+    preview: string;
+  }) {
+    await this.dispatch(o.to, o.name, T.newMessage({ ...this.ctx, ...o }));
+  }
+
+  async disputeOpened(o: {
+    to: string;
+    name: string;
+    reference: string;
+    reason: string;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.disputeOpened({ ...this.ctx, ...o }),
+      o.reference,
+    );
+  }
+
+  async disputeResolved(o: {
+    to: string;
+    name: string;
+    reference: string;
+    outcome: string;
+    refundAmount?: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.disputeResolved({ ...this.ctx, ...o }),
+      o.reference,
+    );
   }
 }

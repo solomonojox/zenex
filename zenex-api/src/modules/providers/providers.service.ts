@@ -4,6 +4,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QueryProvidersDto } from './dto/query-providers.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { CreateServiceDto, UpdateServiceDto } from './dto/service.dto';
+import { isWithinRadius } from '../../common/geo/canadian-cities';
+
+/**
+ * Ceiling on rows pulled when a location filter is active.
+ *
+ * Distance needs haversine per row, which can't be expressed in a Prisma
+ * `where`, so a located search fetches an ordered pool and filters in memory.
+ * Past this many providers in one tenant, results become a "top N nearest"
+ * approximation rather than the complete set — the point at which this should
+ * move to PostGIS and go back into the query.
+ */
+const SEARCH_POOL = 500;
 
 @Injectable()
 export class ProvidersService {
@@ -29,9 +41,6 @@ export class ProvidersService {
         { user: { lastName: { contains: query.q, mode: 'insensitive' } } },
       ];
     }
-    if (query.location) {
-      where.location = { contains: query.location, mode: 'insensitive' };
-    }
     if (query.verified === 'true') where.verified = true;
     if (query.instant === 'true') where.instant = true;
 
@@ -42,16 +51,49 @@ export class ProvidersService {
           ? { aiMatch: 'desc' }
           : { rating: 'desc' };
 
+    const include = {
+      user: { select: { firstName: true, lastName: true } },
+      services: true,
+    };
+
+    // Location filtering happens in memory, because it measures real distance
+    // against each provider's own maxRadiusKm — the same rule the instant-quote
+    // matcher uses. Keeping the old SQL substring test here would have search
+    // and instant-book disagree about who covers a given city, which is the
+    // sort of contradiction clients notice and providers complain about.
+    if (query.location) {
+      const location = query.location;
+      const city = location.split(',')[0].trim().toLowerCase();
+
+      const pool = await this.prisma.providerProfile.findMany({
+        where,
+        orderBy,
+        take: SEARCH_POOL,
+        include,
+      });
+
+      const nearby = pool.filter((p) => {
+        const within = isWithinRadius(p.location, location, p.maxRadiusKm);
+        // null means one of the two places isn't in the coordinate table;
+        // fall back to the substring test so an unlisted town behaves as it
+        // did before rather than dropping the provider from search entirely.
+        return within ?? p.location.toLowerCase().includes(city);
+      });
+
+      const total = nearby.length;
+      return {
+        items: nearby.slice((page - 1) * limit, page * limit),
+        meta: { page, limit, total, pages: Math.ceil(total / limit) },
+      };
+    }
+
     const [items, total] = await this.prisma.$transaction([
       this.prisma.providerProfile.findMany({
         where,
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        include: {
-          user: { select: { firstName: true, lastName: true } },
-          services: true,
-        },
+        include,
       }),
       this.prisma.providerProfile.count({ where }),
     ]);

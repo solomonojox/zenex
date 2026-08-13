@@ -48,9 +48,20 @@ services:
         sync: false
       - key: STORAGE_BUCKET
         value: zenex-uploads
-      - key: RESEND_API_KEY
+      # ── Email: ZeptoMail (Zoho) ──
+      # Send Mail Token from Agents > SMTP/API. Leave unset and email drops to
+      # log mode rather than failing.
+      - key: ZEPTOMAIL_TOKEN
         sync: false
+      # Change to api.zeptomail.eu / .in if the Zoho account is in that region.
+      - key: ZEPTOMAIL_API_URL
+        value: https://api.zeptomail.com/v1.1/email
+      # Domain must be verified in the ZeptoMail agent or every send is rejected.
       - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Zenex
+      - key: MAIL_REPLY_TO
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
