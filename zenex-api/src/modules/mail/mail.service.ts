@@ -477,6 +477,25 @@ export class MailService {
     );
   }
 
+  // ─────────────── account status ───────────────
+
+  async accountSuspended(o: { to: string; name: string; reason?: string }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.accountSuspended({
+        ...this.ctx,
+        ...o,
+        // Replies need somewhere to land, or "contact us" is a dead end.
+        supportEmail: this.replyTo || this.fromAddress,
+      }),
+    );
+  }
+
+  async accountReinstated(o: { to: string; name: string }) {
+    await this.dispatch(o.to, o.name, T.accountReinstated({ ...this.ctx, ...o }));
+  }
+
   // ─────────────── messaging & disputes ───────────────
 
   async newMessage(o: {

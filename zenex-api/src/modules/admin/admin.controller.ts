@@ -57,7 +57,7 @@ export class AdminController {
 
   @Patch('users/:id/status')
   setUserStatus(@Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
-    return this.admin.setUserStatus(id, dto.active);
+    return this.admin.setUserStatus(id, dto.active, dto.reason);
   }
 
   @Get('disputes')

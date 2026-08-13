@@ -570,6 +570,45 @@ export const insuranceExpiring = (o: {
     },
   );
 
+// ─────────────── account status ───────────────
+
+/**
+ * Suspension is the one action where email is the *only* channel that reaches
+ * the person: they cannot sign in, so an in-app notification is unreachable by
+ * definition. Being locked out mid-booking with no explanation and no way to
+ * appeal is the kind of thing that ends up in a chargeback or a public review.
+ */
+export const accountSuspended = (o: {
+  appUrl: string;
+  name: string;
+  reason?: string;
+  supportEmail: string;
+}) =>
+  render('Your Zenex account has been suspended', {
+    preheader: 'You will not be able to sign in until this is resolved.',
+    heading: 'Your account has been suspended',
+    paragraphs: [
+      `Hi ${o.name}, your Zenex account has been suspended and you will not be able to sign in for now.`,
+      ...(o.reason ? [`Reason given: ${o.reason}`] : []),
+      'Any booking already confirmed is not automatically cancelled. If you have work scheduled, contact us so nobody is left waiting.',
+      'If you think this is a mistake, reply to this email and a person will look at it.',
+    ],
+    cta: { label: 'Contact support', url: `mailto:${o.supportEmail}` },
+    footnote:
+      'We only suspend accounts over safety, payment or conduct concerns, and every suspension is reviewed by a person.',
+  });
+
+export const accountReinstated = (o: { appUrl: string; name: string }) =>
+  render('Your Zenex account is active again', {
+    preheader: 'You can sign in as normal.',
+    heading: 'Your account has been restored',
+    paragraphs: [
+      `Good news ${o.name} — the suspension on your account has been lifted and you can sign in as normal.`,
+      'Everything is where you left it: your bookings, messages and profile are unchanged.',
+    ],
+    cta: { label: 'Sign in', url: `${o.appUrl}/auth?mode=login` },
+  });
+
 // ─────────────── messaging & disputes ───────────────
 
 export const newMessage = (o: {

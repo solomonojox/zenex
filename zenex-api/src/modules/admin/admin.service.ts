@@ -136,12 +136,50 @@ export class AdminService {
     };
   }
 
-  setUserStatus(id: string, active: boolean) {
-    return this.prisma.user.update({
+  /**
+   * Suspend or reinstate an account, and tell the person.
+   *
+   * This used to flip `isActive` silently in both directions. A suspended user
+   * cannot sign in, so an in-app notification is unreachable by definition —
+   * email is the only channel that gets to them, which makes it the one place
+   * a notification is genuinely required rather than merely nice.
+   */
+  async setUserStatus(id: string, active: boolean, reason?: string) {
+    const before = await this.prisma.user.findUnique({
+      where: { id },
+      select: { isActive: true },
+    });
+
+    const user = await this.prisma.user.update({
       where: { id },
       data: { isActive: active },
-      select: { id: true, email: true, isActive: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        isActive: true,
+      },
     });
+
+    // Only on an actual change of state — re-saving the same status should not
+    // send someone a second suspension notice.
+    const changed = before && before.isActive !== active;
+    if (changed && user.email) {
+      if (active) {
+        await this.mail.accountReinstated({
+          to: user.email,
+          name: user.firstName,
+        });
+      } else {
+        await this.mail.accountSuspended({
+          to: user.email,
+          name: user.firstName,
+          reason,
+        });
+      }
+    }
+
+    return user;
   }
 
   listDisputes(tenantId: string, status?: DisputeStatus) {
