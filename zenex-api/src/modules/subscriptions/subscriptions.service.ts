@@ -257,10 +257,96 @@ export class SubscriptionsService {
     if (!sub || sub.clientId !== client.id) {
       throw new NotFoundException('Subscription not found');
     }
+
+    // Cancel at Stripe first. Previously this only flipped the local row,
+    // which meant a customer who cancelled kept being charged every month
+    // while the app showed them as cancelled — the worst possible pairing.
+    // If Stripe rejects, we do not mark it cancelled locally either: better an
+    // honest error than a UI that says cancelled while the card is still live.
+    if (sub.stripeSubId && this.stripe.enabled) {
+      await this.stripe.client.subscriptions.update(sub.stripeSubId, {
+        // Matches the terms shown at checkout: the period already paid for
+        // runs to its end, and nothing renews after it.
+        cancel_at_period_end: true,
+      });
+    }
+
     return this.prisma.subscription.update({
       where: { id },
       data: { status: SubscriptionStatus.CANCELLED },
       include: { plan: true },
+    });
+  }
+
+  /**
+   * A renewal payment succeeded — start the next period.
+   *
+   * Driven by Stripe's `invoice.paid` in live mode, so the allowance is only
+   * ever granted against money that actually arrived. `periodEnd` comes from
+   * Stripe rather than being recomputed, so our renewal date cannot drift away
+   * from the date the card is really charged on.
+   */
+  async renewFromPayment(stripeSubId: string, periodEnd?: Date) {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { stripeSubId },
+      include: { plan: true },
+    });
+    if (!sub) return null;
+
+    return this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        status: SubscriptionStatus.ACTIVE,
+        // Resets rather than accumulates — "2 cleans a month" is not 24 saved
+        // up over a year.
+        cleansRemaining: sub.plan.includedCleans,
+        renewsAt: periodEnd ?? this.computeRenewal(sub.plan.frequency),
+      },
+    });
+  }
+
+  /**
+   * A renewal payment failed.
+   *
+   * Paused, not cancelled: Stripe retries a failed card over several days and
+   * most recover. PAUSED stops entitlements immediately — the booking path
+   * only honours ACTIVE — without destroying the subscription while the
+   * customer still has a chance to fix their card.
+   */
+  async markPaymentFailed(stripeSubId: string) {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { stripeSubId },
+      include: { plan: true, client: { include: { user: true } } },
+    });
+    if (!sub || sub.status === SubscriptionStatus.CANCELLED) return null;
+
+    const updated = await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: { status: SubscriptionStatus.PAUSED, cleansRemaining: 0 },
+    });
+
+    const account = sub.client?.user;
+    if (account?.email) {
+      await this.mail.subscriptionPaymentFailed({
+        to: account.email,
+        name: account.firstName,
+        planName: sub.plan.name,
+        amount: sub.consentAmount ?? sub.plan.price,
+      });
+    }
+
+    return updated;
+  }
+
+  /** Stripe has given up retrying, or the subscription ended. */
+  async markCancelledByStripe(stripeSubId: string) {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { stripeSubId },
+    });
+    if (!sub) return null;
+    return this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: { status: SubscriptionStatus.CANCELLED, cleansRemaining: 0 },
     });
   }
 

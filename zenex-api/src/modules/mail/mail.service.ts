@@ -334,6 +334,19 @@ export class MailService {
     );
   }
 
+  async subscriptionPaymentFailed(o: {
+    to: string;
+    name: string;
+    planName: string;
+    amount: number;
+  }) {
+    await this.dispatch(
+      o.to,
+      o.name,
+      T.subscriptionPaymentFailed({ ...this.ctx, ...o }),
+    );
+  }
+
   async subscriptionStarted(o: {
     to: string;
     name: string;

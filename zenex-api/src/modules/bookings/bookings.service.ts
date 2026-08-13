@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { BookingStatus, Prisma, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '../../common/enums/role.enum';
@@ -72,6 +72,9 @@ export class BookingsService {
     // else hourly rate * hours.
     let basePrice: number;
     let serviceId: string | undefined = dto.serviceId;
+    // What kind of clean this is, used to decide whether a plan's included
+    // clean applies. Distinct from the `serviceName` used for emails below.
+    let bookedServiceLabel = internal?.serviceLabel ?? '';
     if (internal?.basePrice !== undefined) {
       basePrice = internal.basePrice;
       serviceId = undefined;
@@ -85,6 +88,7 @@ export class BookingsService {
         );
       }
       basePrice = service.price;
+      bookedServiceLabel = service.name;
     } else {
       const hours = dto.hours ?? provider.minBookingHrs;
       basePrice = provider.hourlyRate * hours;
@@ -93,8 +97,39 @@ export class BookingsService {
 
     const extras = dto.extras ?? [];
     const extrasTotal = extras.reduce((sum, e) => sum + e.price, 0);
+
+    // ── Subscription entitlements ──
+    // Until now a plan cost money and delivered nothing: cleansRemaining was
+    // granted and never spent, and the extras discount was never applied.
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { clientId: client.id, status: SubscriptionStatus.ACTIVE },
+      include: { plan: true },
+    });
+
+    let discountAmount = 0;
+    let usesCleanCredit = false;
+
+    if (subscription) {
+      // The plans promise "N standard cleans" — a deep clean or a move-out is
+      // a different job at a different price and is not what was bought.
+      const isStandard = /\bstandard\b/i.test(bookedServiceLabel);
+      if (isStandard && subscription.cleansRemaining > 0) {
+        usesCleanCredit = true;
+        discountAmount += basePrice;
+      }
+      const pct = subscription.plan.extrasDiscountPercent;
+      if (pct > 0 && extrasTotal > 0) {
+        discountAmount += (extrasTotal * pct) / 100;
+      }
+    }
+
+    discountAmount = Math.round(discountAmount * 100) / 100;
+
+    // Tax applies to what is actually charged, not the pre-discount figure —
+    // billing GST on money the customer never paid would be a real problem.
+    const chargeable = Math.max(0, basePrice + extrasTotal - discountAmount);
     // Sales tax is based on where the service is performed (provider's province).
-    const tax = calculateTax(basePrice + extrasTotal, provider.location);
+    const tax = calculateTax(chargeable, provider.location);
     const totalPrice = tax.total;
 
     // Reject the booking if the provider is already busy or off at that time.
@@ -120,43 +155,65 @@ export class BookingsService {
       );
     }
 
-    const created = await this.prisma.booking.create({
-      data: {
-        reference: this.genReference(),
-        tenant: { connect: { id: provider.tenantId } },
-        client: { connect: { id: client.id } },
-        provider: { connect: { id: provider.id } },
-        ...(serviceId ? { service: { connect: { id: serviceId } } } : {}),
-        scheduledFor,
-        durationMins,
-        // Instant bookings have no Service row, so keep the description in
-        // notes where the provider will still see it.
-        timeSlot: dto.timeSlot,
-        ...(internal?.serviceLabel
-          ? {
-              notes: [internal.serviceLabel, dto.notes]
-                .filter(Boolean)
-                .join(' — '),
-            }
-          : {}),
-        // Instant-book providers auto-confirm; others start pending.
-        status: provider.instant
-          ? BookingStatus.CONFIRMED
-          : BookingStatus.PENDING,
-        basePrice,
-        extrasTotal,
-        taxAmount: tax.taxAmount,
-        taxRate: tax.taxRate,
-        taxLabel: tax.taxLabel,
-        province: tax.province,
-        totalPrice,
-        address: dto.address,
-        notes: dto.notes,
-        extras: {
-          create: extras.map((e) => ({ name: e.name, price: e.price })),
+    // Booking and credit spend go together. Two tabs booking at once would
+    // otherwise each see cleansRemaining > 0 and both get a free clean.
+    const created = await this.prisma.$transaction(async (tx) => {
+      if (usesCleanCredit && subscription) {
+        const spent = await tx.subscription.updateMany({
+          // The count guard makes this a compare-and-set: if a concurrent
+          // booking already took the last credit, this matches zero rows.
+          where: { id: subscription.id, cleansRemaining: { gt: 0 } },
+          data: { cleansRemaining: { decrement: 1 } },
+        });
+        if (spent.count === 0) {
+          throw new BadRequestException(
+            'Your included cleans for this period have already been used.',
+          );
+        }
+      }
+
+      return tx.booking.create({
+        data: {
+          reference: this.genReference(),
+          tenant: { connect: { id: provider.tenantId } },
+          client: { connect: { id: client.id } },
+          provider: { connect: { id: provider.id } },
+          ...(serviceId ? { service: { connect: { id: serviceId } } } : {}),
+          ...(usesCleanCredit && subscription
+            ? { subscription: { connect: { id: subscription.id } } }
+            : {}),
+          scheduledFor,
+          durationMins,
+          // Instant bookings have no Service row, so keep the description in
+          // notes where the provider will still see it.
+          timeSlot: dto.timeSlot,
+          ...(internal?.serviceLabel
+            ? {
+                notes: [internal.serviceLabel, dto.notes]
+                  .filter(Boolean)
+                  .join(' — '),
+              }
+            : {}),
+          // Instant-book providers auto-confirm; others start pending.
+          status: provider.instant
+            ? BookingStatus.CONFIRMED
+            : BookingStatus.PENDING,
+          basePrice,
+          extrasTotal,
+          discountAmount,
+          taxAmount: tax.taxAmount,
+          taxRate: tax.taxRate,
+          taxLabel: tax.taxLabel,
+          province: tax.province,
+          totalPrice,
+          address: dto.address,
+          notes: dto.notes,
+          extras: {
+            create: extras.map((e) => ({ name: e.name, price: e.price })),
+          },
         },
-      },
-      include: bookingInclude,
+        include: bookingInclude,
+      });
     });
 
     // Tell both sides. Failures here never affect the booking itself.

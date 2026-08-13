@@ -586,57 +586,77 @@ async function main() {
     console.log('  seeded 3 instant pricing rules');
   }
 
-  // Subscription plans (only if none exist for this tenant yet)
-  const planCount = await prisma.subscriptionPlan.count({
-    where: { tenantId: tenant.id },
-  });
-  if (planCount === 0) {
-    await prisma.subscriptionPlan.createMany({
-      data: [
-        {
-          tenantId: tenant.id,
-          name: 'Starter',
-          frequency: 'Monthly',
-          price: 129,
-          savesPercent: 15,
-          features: [
-            '1 standard clean/month',
-            'Priority booking',
-            '10% extras discount',
-          ],
-        },
-        {
-          tenantId: tenant.id,
-          name: 'Regular',
-          frequency: 'Bi-weekly',
-          price: 219,
-          savesPercent: 20,
-          features: [
-            '2 standard cleans/month',
-            'Priority booking',
-            '15% extras discount',
-            'Dedicated cleaner',
-          ],
-          popular: true,
-        },
-        {
-          tenantId: tenant.id,
-          name: 'Premium',
-          frequency: 'Weekly',
-          price: 379,
-          savesPercent: 25,
-          features: [
-            '4 standard cleans/month',
-            'Priority booking',
-            '20% extras discount',
-            'Dedicated cleaner',
-            'Same-day guarantee',
-          ],
-        },
+  // Subscription plans, matched by name so entitlement changes reach rows that
+  // already exist. Guarding on `count === 0` made this create-only, which is
+  // exactly how the corrected review pairings failed to apply earlier.
+  //
+  // Feature lists describe only what the code delivers. "Priority booking",
+  // "Dedicated cleaner" and "Same-day guarantee" were removed: none of them
+  // exist, and a plan should not promise what it cannot do. Put them back as
+  // they get built.
+  const PLANS = [
+    {
+      name: 'Starter',
+      frequency: 'Monthly',
+      price: 129,
+      savesPercent: 15,
+      includedCleans: 1,
+      extrasDiscountPercent: 10,
+      popular: false,
+      features: [
+        '1 standard clean included each month',
+        '10% off booking extras',
+        'Cancel any time',
       ],
+    },
+    {
+      name: 'Regular',
+      frequency: 'Bi-weekly',
+      price: 219,
+      savesPercent: 20,
+      includedCleans: 2,
+      extrasDiscountPercent: 15,
+      popular: true,
+      features: [
+        '2 standard cleans included each month',
+        '15% off booking extras',
+        'Cancel any time',
+      ],
+    },
+    {
+      name: 'Premium',
+      frequency: 'Weekly',
+      price: 379,
+      savesPercent: 25,
+      includedCleans: 4,
+      extrasDiscountPercent: 20,
+      popular: false,
+      features: [
+        '4 standard cleans included each month',
+        '20% off booking extras',
+        'Cancel any time',
+      ],
+    },
+  ];
+
+  for (const plan of PLANS) {
+    // No unique constraint on (tenantId, name), so match then update or create.
+    const existingPlan = await prisma.subscriptionPlan.findFirst({
+      where: { tenantId: tenant.id, name: plan.name },
+      select: { id: true },
     });
-    console.log('  seeded 3 subscription plans');
+    if (existingPlan) {
+      await prisma.subscriptionPlan.update({
+        where: { id: existingPlan.id },
+        data: plan,
+      });
+    } else {
+      await prisma.subscriptionPlan.create({
+        data: { ...plan, tenantId: tenant.id },
+      });
+    }
   }
+  console.log(`  ${PLANS.length} subscription plans synced`);
 
   console.log(
     `\nSeed complete — ${PROVIDERS.length} providers on tenant "${tenant.slug}".`,

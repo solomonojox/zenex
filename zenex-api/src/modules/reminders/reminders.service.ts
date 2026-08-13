@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -179,6 +179,58 @@ export class RemindersService {
     }
 
     if (sent) this.logger.log(`Nudged ${sent} provider(s) to connect payouts`);
+  }
+
+  /**
+   * Roll subscriptions into their next period.
+   *
+   * Without this the included cleans are granted once at activation and never
+   * again — a subscriber pays every month and gets their allowance only in the
+   * first one. Runs daily; each subscription rolls when its renewal date has
+   * passed.
+   *
+   * Demo-mode subscriptions only. Anything with a `stripeSubId` is renewed by
+   * the `invoice.paid` webhook instead, so the allowance is granted against a
+   * payment Stripe confirms it collected. Renewing those here as well would
+   * hand free cleans to a customer whose card had just been declined.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async renewSubscriptions() {
+    const now = new Date();
+
+    const due = await this.prisma.subscription.findMany({
+      where: {
+        status: SubscriptionStatus.ACTIVE,
+        renewsAt: { lte: now },
+        stripeSubId: null,
+      },
+      include: { plan: true },
+    });
+    if (due.length === 0) return;
+
+    for (const sub of due) {
+      const next = new Date(sub.renewsAt ?? now);
+      const f = sub.plan.frequency.toLowerCase();
+      // Advance past now, so a subscription that missed several runs lands on
+      // the next future date rather than renewing repeatedly in a loop.
+      do {
+        if (f.includes('bi') && f.includes('week')) next.setDate(next.getDate() + 14);
+        else if (f.includes('week')) next.setDate(next.getDate() + 7);
+        else next.setMonth(next.getMonth() + 1);
+      } while (next <= now);
+
+      await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          // Allowance resets rather than accumulates — "2 cleans a month" does
+          // not mean 24 saved up at the end of a year.
+          cleansRemaining: sub.plan.includedCleans,
+          renewsAt: next,
+        },
+      });
+    }
+
+    this.logger.log(`Renewed ${due.length} subscription(s)`);
   }
 
   @Cron(CronExpression.EVERY_HOUR)

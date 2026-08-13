@@ -363,6 +363,13 @@ model Booking {
   status       BookingStatus @default(PENDING)
   basePrice    Float
   extrasTotal  Float         @default(0)
+  /// Money taken off by a subscription: the covered clean and/or the extras
+  /// discount. Kept so a subscriber can be shown what their plan saved them,
+  /// and so we can prove the plan delivered something.
+  discountAmount Float       @default(0)
+  /// The subscription that paid for this booking, if any. Also the audit trail
+  /// for a spent clean credit.
+  subscriptionId String?
   // Canadian sales tax, resolved from the service province at booking time.
   taxAmount    Float         @default(0)
   taxRate      Float         @default(0)
@@ -380,6 +387,7 @@ model Booking {
   client   ClientProfile   @relation(fields: [clientId], references: [id])
   provider ProviderProfile @relation(fields: [providerId], references: [id])
   service  Service?        @relation(fields: [serviceId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   extras   BookingExtra[]
   review   Review?
   dispute  Dispute?
@@ -569,8 +577,9 @@ model Subscription {
   /// leaves someone holding an active plan they were not charged for.
   activatedAt      DateTime?
 
-  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
-  client ClientProfile    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  client   ClientProfile    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  bookings Booking[]
 
   @@index([clientId])
   @@map("subscriptions")

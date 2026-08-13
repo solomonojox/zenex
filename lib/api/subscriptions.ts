@@ -6,6 +6,8 @@ export interface ApiPlan {
   frequency: string;
   price: number;
   savesPercent: number;
+  includedCleans: number;
+  extrasDiscountPercent: number;
   features: string[];
   popular: boolean;
 }
@@ -13,9 +15,12 @@ export interface ApiPlan {
 export interface ApiSubscription {
   id: string;
   planId: string;
+  /** PENDING (awaiting payment) | ACTIVE | PAUSED (payment failed) | CANCELLED */
   status: string;
   startedAt: string;
   renewsAt?: string | null;
+  /** Standard cleans left this period. */
+  cleansRemaining: number;
   plan?: ApiPlan;
 }
 

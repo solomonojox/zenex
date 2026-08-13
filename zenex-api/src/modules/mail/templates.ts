@@ -466,6 +466,29 @@ export const stripeOnboardingReminder = (o: {
     cta: { label: 'Connect bank account', url: `${o.appUrl}/wallet` },
   });
 
+export const subscriptionPaymentFailed = (o: {
+  appUrl: string;
+  name: string;
+  planName: string;
+  amount: number;
+}) =>
+  render(`Your ${o.planName} plan is paused`, {
+    preheader: 'We could not take this month’s payment.',
+    heading: 'We could not take your payment',
+    paragraphs: [
+      `Hi ${o.name}, the ${money(o.amount)} payment for your ${o.planName} plan did not go through, so the plan is paused for now.`,
+      'Your included cleans are on hold until it is sorted. Any booking already confirmed still goes ahead as normal.',
+      'This is usually an expired card or a bank block. Updating your card details is enough to restart it.',
+    ],
+    facts: [
+      ['Plan', o.planName],
+      ['Amount due', money(o.amount)],
+    ],
+    cta: { label: 'Update payment details', url: `${o.appUrl}/client` },
+    footnote:
+      'If you meant to cancel, you can ignore this — the plan will not restart on its own.',
+  });
+
 export const subscriptionStarted = (o: {
   appUrl: string;
   name: string;

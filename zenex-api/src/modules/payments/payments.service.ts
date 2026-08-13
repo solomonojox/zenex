@@ -275,6 +275,46 @@ export class PaymentsService {
       return { received: true };
     }
 
+    // ── Recurring billing ──
+    // Renewals are driven by Stripe, not by our clock. The allowance is only
+    // ever granted against an invoice Stripe confirms it collected.
+    if (event.type === 'invoice.paid') {
+      const invoice = event.data.object as Stripe.Invoice;
+      const stripeSubId =
+        typeof invoice.subscription === 'string'
+          ? invoice.subscription
+          : invoice.subscription?.id;
+      // The first invoice is handled by checkout.session.completed; this is
+      // for the periods after it.
+      if (stripeSubId && invoice.billing_reason !== 'subscription_create') {
+        const periodEnd = invoice.period_end
+          ? new Date(invoice.period_end * 1000)
+          : undefined;
+        await this.subscriptions.renewFromPayment(stripeSubId, periodEnd);
+      }
+      return { received: true };
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object as Stripe.Invoice;
+      const stripeSubId =
+        typeof invoice.subscription === 'string'
+          ? invoice.subscription
+          : invoice.subscription?.id;
+      if (stripeSubId) {
+        await this.subscriptions.markPaymentFailed(stripeSubId);
+      }
+      return { received: true };
+    }
+
+    // Stripe has exhausted its retries, or the customer's cancellation has
+    // reached the end of the paid period.
+    if (event.type === 'customer.subscription.deleted') {
+      const sub = event.data.object as Stripe.Subscription;
+      await this.subscriptions.markCancelledByStripe(sub.id);
+      return { received: true };
+    }
+
     if (event.type === 'payment_intent.succeeded') {
       const intent = event.data.object as Stripe.PaymentIntent;
       const bookingId = intent.metadata?.bookingId;
