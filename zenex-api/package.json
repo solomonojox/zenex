@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "prisma generate && nest build && npm run verify:build",
-    "verify:build": "node -e \"require('fs').accessSync('dist/main.js'); console.log('✔ dist/main.js emitted')\"",
+    "verify:build": "node -e \"const fs=require('fs');if(!fs.existsSync('dist/main.js')){console.error('✖ dist/main.js missing. dist contains:',fs.existsSync('dist')?fs.readdirSync('dist'):'(no dist)');process.exit(1)}console.log('✔ dist/main.js emitted')\"",
     "deploy:migrate": "prisma migrate deploy",
     "start:render": "prisma migrate deploy && node dist/main",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

@@ -1,11 +1,21 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    // Incremental builds must be OFF for production. Render caches the
-    // build directory, so a stale .tsbuildinfo made TypeScript think nothing
-    // had changed and emit no output — while nest's deleteOutDir had already
-    // removed dist/. The build "succeeded" with no dist/main.js.
+    // Pin the source root. Without this TypeScript infers it from the common
+    // parent of all inputs — and because prisma/seed.ts lives outside src/,
+    // that parent became the project root, so output landed in dist/src/main.js
+    // instead of dist/main.js and the deploy couldn't find its entrypoint.
+    "rootDir": "./src",
+    // Off for production: Render caches the build dir, and a stale
+    // .tsbuildinfo makes the compiler skip emitting entirely.
     "incremental": false
   },
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  // prisma/ is run through ts-node (seeding), never compiled into dist.
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "prisma",
+    "**/*spec.ts"
+  ]
 }
