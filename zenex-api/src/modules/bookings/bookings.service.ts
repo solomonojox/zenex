@@ -351,14 +351,11 @@ export class BookingsService {
       },
       select: { id: true, email: true, firstName: true },
     });
-    // The refund figure only belongs in the client's copy — the provider has
-    // no business seeing what was returned, and "a refund is on its way" would
-    // read as though they were being paid.
-    // refundBooking() returns null when the booking was never paid.
-    const refundAmount = refund?.refundAmount;
-
+    // No refund figure here on purpose: refundBooking() sends its own
+    // refundIssued email with the exact amount after the policy percentage is
+    // applied. Repeating a number this email would have to guess at is how the
+    // two end up disagreeing.
     for (const r of recipients) {
-      const isClient = r.id === clientUserId;
       await this.mail.bookingCancelled({
         to: r.email,
         name: r.firstName,
@@ -366,7 +363,6 @@ export class BookingsService {
         serviceName: svcName,
         scheduledFor: updated.scheduledFor,
         cancelledBy: r.id === user.id ? undefined : 'the other party',
-        ...(isClient && refundAmount !== undefined ? { refundAmount } : {}),
       });
     }
 
@@ -399,6 +395,98 @@ export class BookingsService {
         type: opts.type ?? 'booking',
       })),
     );
+  }
+
+  /**
+   * Move a booking to a new time.
+   *
+   * Either party may reschedule — a client's plans change, and a provider who
+   * is running over on an earlier job needs an alternative to cancelling.
+   * The new slot goes through the same conflict check as a fresh booking, so
+   * rescheduling cannot be used to double-book a provider.
+   */
+  async reschedule(user: AuthUser, id: string, scheduledFor: string) {
+    const booking = await this.prisma.booking.findUnique({ where: { id } });
+    if (!booking) throw new NotFoundException('Booking not found');
+    await this.assertAccess(user, booking);
+
+    if (
+      booking.status === BookingStatus.CANCELLED ||
+      booking.status === BookingStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'This booking can no longer be rescheduled',
+      );
+    }
+
+    const startsAt = new Date(scheduledFor);
+    if (Number.isNaN(startsAt.getTime())) {
+      throw new BadRequestException('Invalid date');
+    }
+    if (startsAt <= new Date()) {
+      throw new BadRequestException('Pick a time in the future');
+    }
+
+    const previous = booking.scheduledFor;
+    if (previous.getTime() === startsAt.getTime()) {
+      throw new BadRequestException('That is already the booked time');
+    }
+
+    const clash = await this.availability.hasConflict(
+      booking.providerId,
+      startsAt,
+      booking.durationMins,
+      id, // ignore this booking when checking — it is the one moving
+    );
+    if (clash) {
+      throw new BadRequestException('That time is no longer available');
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id },
+      data: {
+        scheduledFor: startsAt,
+        // The old reminder is void — let the cron send a fresh one for the
+        // new time, otherwise a moved booking silently loses its reminder.
+        reminderSentAt: null,
+      },
+      include: bookingInclude,
+    });
+
+    await this.notifyBothParties(updated, {
+      title: `Booking ${updated.reference} moved`,
+      body: updated.service?.name ?? 'Cleaning',
+      type: 'booking',
+      exceptUserId: user.id,
+    });
+
+    const svcName = updated.service?.name ?? 'Cleaning';
+    const [clientUserId, providerUserId] = await Promise.all([
+      this.notifications.userIdForClient(updated.clientId),
+      this.notifications.userIdForProvider(updated.providerId),
+    ]);
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        id: {
+          in: [clientUserId, providerUserId].filter(
+            (uid): uid is string => !!uid,
+          ),
+        },
+      },
+      select: { email: true, firstName: true },
+    });
+    for (const r of recipients) {
+      await this.mail.bookingRescheduled({
+        to: r.email,
+        name: r.firstName,
+        reference: updated.reference,
+        serviceName: svcName,
+        previous,
+        scheduledFor: startsAt,
+      });
+    }
+
+    return updated;
   }
 
   /** Provider (owner) or admin advances the booking status. */

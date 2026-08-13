@@ -14,6 +14,7 @@ import { QuoteDto } from './dto/quote.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -54,6 +55,16 @@ export class BookingsController {
   @Patch(':id/cancel')
   cancel(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.bookingsService.cancel(user, id);
+  }
+
+  /** Either party can move a booking; the slot is re-checked for conflicts. */
+  @Patch(':id/reschedule')
+  reschedule(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: RescheduleBookingDto,
+  ) {
+    return this.bookingsService.reschedule(user, id, dto.scheduledFor);
   }
 
   @Roles(Role.PROVIDER, Role.ADMIN)

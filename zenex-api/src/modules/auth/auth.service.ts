@@ -100,6 +100,12 @@ export class AuthService {
       await this.mail.welcomeClient({ to: user.email, name: user.firstName });
     }
 
+    // Confirmation link. Nothing is gated on being verified yet — blocking
+    // signup on an email round-trip would cost more registrations than the
+    // bad addresses are worth — but it gives us a way to spot typos, and a
+    // verified flag to gate on later once volume justifies it.
+    await this.issueEmailVerification(user);
+
     return this.issueTokens(user.id, user.email, user.role, user.tenantId);
   }
 
@@ -165,6 +171,97 @@ export class AuthService {
       payload.role,
       payload.tenantId,
     );
+  }
+
+  /**
+   * Issue a fresh confirmation link.
+   *
+   * Same token shape as password reset — "<rowId>.<secret>", raw secret emailed,
+   * only the argon2 hash stored — so there is one scheme to audit rather than
+   * two. Any earlier unused tokens are consumed first, so an old link in an old
+   * inbox stops working once a new one is requested.
+   */
+  private async issueEmailVerification(user: {
+    id: string;
+    email: string;
+    firstName: string;
+  }) {
+    await this.prisma.emailVerificationToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const secret = crypto.randomBytes(32).toString('hex');
+    const row = await this.prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: await argon2.hash(secret),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+
+    await this.mail.verifyEmail({
+      to: user.email,
+      name: user.firstName,
+      token: `${row.id}.${secret}`,
+    });
+  }
+
+  /** Consume a confirmation token and mark the address verified. */
+  async verifyEmail(token: string) {
+    const sep = token.indexOf('.');
+    const rowId = sep > 0 ? token.slice(0, sep) : '';
+    const secret = sep > 0 ? token.slice(sep + 1) : '';
+    const invalid = new BadRequestException(
+      'This confirmation link is invalid or has expired.',
+    );
+    if (!rowId || !secret) throw invalid;
+
+    const matched = await this.prisma.emailVerificationToken.findUnique({
+      where: { id: rowId },
+    });
+    if (
+      !matched ||
+      matched.usedAt ||
+      matched.expiresAt <= new Date() ||
+      !(await argon2.verify(matched.tokenHash, secret))
+    ) {
+      throw invalid;
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: matched.userId },
+        data: { emailVerified: true, emailVerifiedAt: new Date() },
+      }),
+      this.prisma.emailVerificationToken.update({
+        where: { id: matched.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return { ok: true, message: 'Email confirmed. Thanks!' };
+  }
+
+  /**
+   * Re-send the confirmation link. Deliberately returns the same response
+   * whether or not the address exists or is already verified — otherwise this
+   * becomes an endpoint for testing which emails have Zenex accounts.
+   */
+  async resendVerification(email: string, tenantSlug: string) {
+    const tenantId = await this.resolveTenantId(tenantSlug);
+    const user = await this.prisma.user.findUnique({
+      where: { tenantId_email: { tenantId, email } },
+    });
+
+    if (user && !user.emailVerified) {
+      await this.issueEmailVerification(user);
+    }
+
+    return {
+      ok: true,
+      message: 'If that address needs confirming, a link is on its way.',
+    };
   }
 
   /**

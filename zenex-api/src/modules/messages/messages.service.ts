@@ -8,6 +8,7 @@ import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { MessagesGateway } from './messages.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class MessagesService {
@@ -15,6 +16,7 @@ export class MessagesService {
     private readonly prisma: PrismaService,
     private readonly gateway: MessagesGateway,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
   ) {}
 
   /** Resolve the caller's messaging identity (client or provider profile id). */
@@ -146,6 +148,15 @@ export class MessagesService {
   async sendMessage(user: AuthUser, threadId: string, body: string) {
     await this.assertParticipant(user, threadId);
 
+    // Does the recipient already have unread messages from this sender in this
+    // thread? If so they have been emailed once already and have not come back
+    // yet, so a second email adds nothing. Checked *before* the insert so the
+    // new message isn't counted. One email per burst of conversation, and the
+    // counter resets the moment they open the thread.
+    const priorUnread = await this.prisma.message.count({
+      where: { threadId, senderId: user.id, readAt: null },
+    });
+
     const message = await this.prisma.message.create({
       data: { threadId, senderId: user.id, body },
     });
@@ -176,6 +187,29 @@ export class MessagesService {
           title: 'New message',
           body: body.slice(0, 120),
         });
+
+        if (priorUnread === 0) {
+          const [recipientUser, sender] = await Promise.all([
+            this.prisma.user.findUnique({
+              where: { id: recipient },
+              select: { email: true, firstName: true },
+            }),
+            this.prisma.user.findUnique({
+              where: { id: user.id },
+              select: { firstName: true, lastName: true },
+            }),
+          ]);
+          if (recipientUser?.email) {
+            await this.mail.newMessage({
+              to: recipientUser.email,
+              name: recipientUser.firstName,
+              senderName: sender
+                ? `${sender.firstName} ${sender.lastName}`.trim()
+                : 'Someone',
+              preview: body.slice(0, 140),
+            });
+          }
+        }
       }
     }
 

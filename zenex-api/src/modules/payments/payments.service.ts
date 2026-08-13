@@ -17,6 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { StripeService } from './stripe.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class PaymentsService {
@@ -26,6 +27,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
   ) {}
 
   private ref(prefix: string) {
@@ -139,7 +141,10 @@ export class PaymentsService {
     const clientWallet = await this.ensureWallet(clientUserId);
     const providerWallet = await this.ensureWallet(providerUserId);
 
-    return this.prisma.$transaction(async (tx) => {
+    // `await`, not `return` — this used to return the transaction, which made
+    // every line below it unreachable. The "payment received" and "you earned"
+    // notifications have therefore never actually been sent.
+    await this.prisma.$transaction(async (tx) => {
       // Client is charged (debit) — this is the one transaction tied to the booking.
       await tx.transaction.create({
         data: {
@@ -198,6 +203,40 @@ export class PaymentsService {
         body: `Booking ${booking.reference} · paid`,
       },
     ]);
+
+    // Emailed receipt with the tax itemised. This is the single choke point
+    // for a successful payment — both the demo path and the Stripe webhook
+    // land here — so wiring it once covers every way a booking gets paid.
+    const clientUser = await this.prisma.user.findUnique({
+      where: { id: clientUserId },
+      select: { email: true, firstName: true },
+    });
+
+    // serviceId is nullable, so pull it into a local first — narrowing a
+    // property access does not survive into the query argument.
+    const serviceId = booking.serviceId;
+    const service = serviceId
+      ? await this.prisma.service.findUnique({
+          where: { id: serviceId },
+          select: { name: true },
+        })
+      : null;
+
+    if (clientUser?.email) {
+      const taxAmount = this.money(booking.taxAmount ?? 0);
+      await this.mail.paymentReceipt({
+        to: clientUser.email,
+        clientName: clientUser.firstName,
+        reference: booking.reference,
+        serviceName: service?.name ?? 'Cleaning',
+        scheduledFor: booking.scheduledFor,
+        subtotal: this.money(booking.basePrice),
+        extrasTotal: this.money(booking.extrasTotal ?? 0),
+        taxAmount,
+        taxLabel: booking.taxLabel ?? 'Tax',
+        total: opts.amount,
+      });
+    }
   }
 
   /** Stripe webhook — verifies signature and settles on payment_intent.succeeded. */
@@ -352,6 +391,27 @@ export class PaymentsService {
       },
     ]);
 
+    // Money leaving the platform gets its own email. It lives here rather than
+    // in the cancellation flow because this is the only code that knows the
+    // amount actually refunded after the policy percentage is applied — and
+    // because refunds triggered any other way still need confirming.
+    const clientUser = await this.prisma.user.findUnique({
+      where: { id: clientUserId },
+      select: { email: true, firstName: true },
+    });
+    if (clientUser?.email) {
+      await this.mail.refundIssued({
+        to: clientUser.email,
+        name: clientUser.firstName,
+        reference: booking.reference,
+        amount: refundAmount,
+        reason:
+          percent < 100
+            ? `${percent}% refunded under the cancellation policy`
+            : undefined,
+      });
+    }
+
     return { refundAmount, providerClawback, percent, stripeRef };
   }
 
@@ -476,7 +536,7 @@ export class PaymentsService {
       stripeRef = transfer.id;
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const payout = await tx.payout.create({
         data: {
           reference: this.ref('PAY'),
@@ -505,5 +565,23 @@ export class PaymentsService {
       });
       return payout;
     });
+
+    // Sent after the transaction commits, not inside it — an email is not
+    // rollback-able, and telling someone their money is on the way when the
+    // write later failed would be worse than not telling them at all.
+    const providerUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true, firstName: true },
+    });
+    if (providerUser?.email) {
+      await this.mail.payoutSent({
+        to: providerUser.email,
+        providerName: providerUser.firstName,
+        amount,
+        jobCount: jobs,
+      });
+    }
+
+    return result;
   }
 }

@@ -54,7 +54,9 @@ export class AdminController {
 
   @Post('disputes')
   createDispute(@CurrentUser() user: AuthUser, @Body() dto: CreateDisputeDto) {
-    return this.admin.createDispute(user.tenantId, dto);
+    // Record who reported it, so the acknowledgement email has a recipient
+    // even when the dispute isn't linked to a booking.
+    return this.admin.createDispute(user.tenantId, dto, user.id);
   }
 
   @Patch('disputes/:id/resolve')

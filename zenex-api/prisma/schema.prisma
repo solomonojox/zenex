@@ -110,6 +110,10 @@ model User {
   role         Role     @default(CLIENT)
   accountType  String   @default("individual")
   isActive     Boolean  @default(true)
+  /// Confirmed ownership of the address. Existing accounts default to false;
+  /// nothing is gated on this yet, so unverified users keep working.
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -119,8 +123,10 @@ model User {
   wallet          Wallet?
   refreshTokens   RefreshToken[]
   passwordResets  PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
   notifications   Notification[]
   favorites       Favorite[]
+  disputesRaised  Dispute[]        @relation("DisputeRaisedBy")
   sentMessages    Message[]        @relation("MessageSender")
 
   @@unique([tenantId, email])
@@ -141,6 +147,23 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+/// Single-use, time-limited token emailed to confirm an address.
+/// Mirrors PasswordResetToken deliberately — same lifecycle, same hashing, so
+/// there is one pattern to reason about rather than two.
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 model RefreshToken {
@@ -579,11 +602,17 @@ model Dispute {
   issue      String
   priority   DisputePriority @default(MEDIUM)
   status     DisputeStatus   @default(OPEN)
+  /// Who reported it. Previously a dispute stored only display-name strings,
+  /// so there was no way to email the person who raised it — they got an
+  /// acknowledgement in-app or not at all. Optional because disputes opened by
+  /// an admin on someone's behalf have no single raiser.
+  raisedById String?
   createdAt  DateTime        @default(now())
   resolvedAt DateTime?
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   booking Booking? @relation(fields: [bookingId], references: [id])
+  raisedBy User?   @relation("DisputeRaisedBy", fields: [raisedById], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([status])

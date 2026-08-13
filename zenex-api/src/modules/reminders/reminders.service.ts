@@ -142,6 +142,45 @@ export class RemindersService {
     if (sent) this.logger.log(`Sent ${sent} insurance expiry warning(s)`);
   }
 
+  /**
+   * Nudge providers sitting on earnings they cannot withdraw.
+   *
+   * Weekly, not daily: the fix takes a few minutes but requires bank details
+   * to hand, so a daily reminder becomes noise long before it becomes action.
+   * Only providers with a positive balance and no Connect account are chased —
+   * there is nothing to nag someone about if they have not earned yet.
+   */
+  @Cron(CronExpression.EVERY_WEEK)
+  async nudgeUnconnectedProviders() {
+    const wallets = await this.prisma.wallet.findMany({
+      where: { balance: { gt: 0 }, stripeConnectAccountId: null },
+      select: {
+        balance: true,
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+            providerProfile: { select: { id: true } },
+          },
+        },
+      },
+    });
+
+    let sent = 0;
+    for (const w of wallets) {
+      // Clients have wallets too; only providers get paid out.
+      if (!w.user?.providerProfile || !w.user.email) continue;
+      await this.mail.stripeOnboardingReminder({
+        to: w.user.email,
+        providerName: w.user.firstName,
+        pendingAmount: w.balance,
+      });
+      sent += 1;
+    }
+
+    if (sent) this.logger.log(`Nudged ${sent} provider(s) to connect payouts`);
+  }
+
   @Cron(CronExpression.EVERY_HOUR)
   async sendDueReminders() {
     const now = new Date();

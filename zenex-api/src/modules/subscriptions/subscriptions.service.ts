@@ -7,10 +7,14 @@ import { SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { CreatePlanDto } from './dto/create-plan.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class SubscriptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
   // ---- Plans ----
 
@@ -52,7 +56,7 @@ export class SubscriptionsService {
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    return this.prisma.subscription.create({
+    const subscription = await this.prisma.subscription.create({
       data: {
         planId,
         clientId: client.id,
@@ -61,6 +65,25 @@ export class SubscriptionsService {
       },
       include: { plan: true },
     });
+
+    // Recurring charges need a paper trail the customer can find later —
+    // what they signed up for, what it costs, and that cancelling is theirs
+    // to do. The AuthUser only carries an id, so the address is looked up.
+    const account = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true, firstName: true },
+    });
+    if (account?.email) {
+      await this.mail.subscriptionStarted({
+        to: account.email,
+        name: account.firstName,
+        planName: plan.name,
+        frequency: plan.frequency,
+        price: plan.price,
+      });
+    }
+
+    return subscription;
   }
 
   async mySubscriptions(user: AuthUser) {
